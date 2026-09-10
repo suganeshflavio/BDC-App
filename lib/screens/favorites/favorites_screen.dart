@@ -1,0 +1,177 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/constants/app_colors.dart';
+import '../../providers/favorite_provider.dart';
+import '../../providers/song_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../lyrics/lyrics_screen.dart';
+import '../home/widgets/song_card.dart';
+
+class FavoritesScreen extends StatefulWidget {
+  final FavoriteProvider favoriteProvider;
+  final SongProvider songProvider;
+  final SettingsProvider settingsProvider;
+
+  const FavoritesScreen({
+    super.key,
+    required this.favoriteProvider,
+    required this.songProvider,
+    required this.settingsProvider,
+  });
+
+  @override
+  State<FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.favoriteProvider.loadFavorites();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.favoriteProvider,
+      builder: (context, _) {
+        final favorites = widget.favoriteProvider.favorites;
+        final isLoading = widget.favoriteProvider.isLoading;
+
+        return Scaffold(
+          backgroundColor: AppColors.scaffoldBackground,
+          appBar: AppBar(
+            backgroundColor: AppColors.primaryDark,
+            elevation: 0,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Favourite',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'விருப்பமான பாடல்கள் • ${favorites.length} பாடல்கள்',
+                  style: GoogleFonts.hindMadurai(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.amberGlow.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          body: RefreshIndicator(
+            color: AppColors.sunriseGold,
+            onRefresh: () => widget.favoriteProvider.loadFavorites(),
+            child: isLoading && favorites.isEmpty
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.sunriseGold,
+                    ),
+                  )
+                : favorites.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.only(top: 10, bottom: 90),
+                        itemCount: favorites.length,
+                        itemBuilder: (context, index) {
+                          final song = favorites[index];
+                          return SongCard(
+                            song: song,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => LyricsScreen(
+                                    song: song,
+                                    settingsProvider: widget.settingsProvider,
+                                    songProvider: widget.songProvider,
+                                    favoriteProvider: widget.favoriteProvider,
+                                  ),
+                                ),
+                              );
+                            },
+                            onToggleFavorite: () async {
+                              await widget.favoriteProvider.removeFavorite(song);
+                              widget.songProvider.updateFavoriteStatus(song.id, false);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Removed "${song.title}" from favorites'),
+                                    duration: const Duration(seconds: 2),
+                                    action: SnackBarAction(
+                                      label: 'Undo',
+                                      textColor: AppColors.amberGlow,
+                                      onPressed: () async {
+                                        await widget.favoriteProvider.toggleFavorite(song);
+                                        widget.songProvider.updateFavoriteStatus(song.id, true);
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.favoriteRed.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.favorite_border_rounded,
+                size: 56,
+                color: AppColors.favoriteRed,
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'விருப்பமான பாடல்கள் இல்லை',
+              style: GoogleFonts.hindMadurai(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'முகப்புப் பக்கத்தில் உள்ள இதய குறியீட்டை அழுத்தி உங்கள் விருப்பமான பாடல்களை இங்கே சேர்க்கலாம்.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.hindMadurai(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
