@@ -488,7 +488,7 @@ class SettingsScreen extends StatelessWidget {
               controller: controller,
               style: GoogleFonts.poppins(fontSize: 13),
               decoration: InputDecoration(
-                hintText: 'http://192.168.1.64:3099/api/v1',
+                hintText: 'https://bdc-lyrics.vercel.app/api/v1',
                 filled: true,
                 fillColor: AppColors.scaffoldBackground,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

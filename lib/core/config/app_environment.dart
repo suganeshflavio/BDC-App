@@ -1,30 +1,74 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../services/storage_service.dart';
 
-/// Environment configuration management.
-/// Supports compile-time `--dart-define=API_BASE_URL=...` as well as
-/// runtime persistence and defaults to the user's active backend endpoint.
+/// Global environment configuration management.
+/// Supports .env file loading via `flutter_dotenv`, compile-time flags
+/// (`--dart-define=API_BASE_URL=...` or `--dart-define-from-file=.env`),
+/// and runtime overrides saved in offline persistent preferences.
 class AppEnvironment {
   AppEnvironment._();
 
-  /// Environment URL configured at compile time or defaults to:
-  /// http://192.168.1.64:3099/api/v1
-  static const String defaultUrl = String.fromEnvironment(
+  /// Default production API base URL
+  static const String fallbackBaseUrl = 'https://bdc-lyrics.vercel.app/api/v1';
+
+  /// Compile-time define via `--dart-define=API_BASE_URL=...`
+  static const String _compileTimeUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.39:3099/api/v1',
+    defaultValue: '',
   );
 
-  /// Current active Base URL (checks runtime override first, then environment default)
+  /// Default active URL resolved by hierarchy:
+  /// 1. Compile-time `--dart-define`
+  /// 2. `.env` asset file via `flutter_dotenv`
+  /// 3. Production fallback endpoint
+  static String get defaultUrl {
+    if (_compileTimeUrl.trim().isNotEmpty) {
+      return _compileTimeUrl.trim();
+    }
+    if (dotenv.isInitialized) {
+      final envUrl = dotenv.maybeGet('API_BASE_URL');
+      if (envUrl != null && envUrl.trim().isNotEmpty) {
+        return envUrl.trim();
+      }
+    }
+    return fallbackBaseUrl;
+  }
+
+  /// Current active Base URL globally used across all API requests.
+  /// Checks runtime storage override first; if none or if stale local dev IP,
+  /// falls back to `defaultUrl`.
   static String get baseUrl {
     final customUrl = StorageService.getCustomBaseUrl();
     if (customUrl != null && customUrl.trim().isNotEmpty) {
-      return customUrl.trim();
+      // If a legacy local subnet IP (192.168.x.x) is stored from previous debugging,
+      // bypass it to avoid blocking access to production.
+      if (!customUrl.contains('192.168.')) {
+        return customUrl.trim();
+      }
     }
     return defaultUrl;
   }
 
-  /// Override environment URL at runtime
+  /// Get any arbitrary environment variable from .env globally
+  static String? get(String key, {String? fallback}) {
+    if (dotenv.isInitialized) {
+      final value = dotenv.maybeGet(key);
+      if (value != null && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return fallback;
+  }
+
+  /// Check whether app is currently pointing to production
+  static bool get isProduction {
+    final env = get('APP_ENV', fallback: 'production')?.toLowerCase();
+    return env == 'production' || baseUrl.contains('bdc-lyrics.vercel.app');
+  }
+
+  /// Override environment URL at runtime (e.g., via Settings screen)
   static Future<void> setBaseUrl(String url) async {
-    await StorageService.saveCustomBaseUrl(url);
+    await StorageService.saveCustomBaseUrl(url.trim());
   }
 
   /// Reset to default environment URL

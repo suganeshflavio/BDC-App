@@ -32,58 +32,131 @@ class ApiService {
     return headers;
   }
 
+  List<Song>? _cachedSongs;
+  AboutUs? _cachedAboutUs;
+
+  List<Song>? get cachedSongs => _cachedSongs;
+  AboutUs? get cachedAboutUs => _cachedAboutUs;
+
   /// GET /songs?q=&page=
-  Future<List<Song>> fetchSongs({String? query, int page = 1}) async {
-    final uri = Uri.parse('$baseUrl${ApiConstants.songs}').replace(
-      queryParameters: {
-        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-        'page': page.toString(),
-      },
-    );
-
-    try {
-      final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-        const Duration(seconds: 3),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['songs'] as List<dynamic>?) ?? [];
-        final favIds = StorageService.getFavoriteIds();
-        return list.map((item) {
-          final song = Song.fromJson(item as Map<String, dynamic>);
-          // Blend with local favorites for guest responsiveness
-          if (favIds.contains(song.id)) {
-            song.isFavorite = true;
-          }
-          return song;
-        }).toList();
-      }
-    } catch (e) {
-      debugPrint('ApiService.fetchSongs fallback: $e');
-    }
-
-    // Offline / Fallback handling
+  Future<List<Song>> fetchSongs({
+    String? query,
+    int page = 1,
+    bool forceRefresh = false,
+  }) async {
     final favIds = StorageService.getFavoriteIds();
-    var songs = List<Song>.from(MockData.defaultSongs);
 
-    // Apply query search (Tamil and Thanglish)
-    if (query != null && query.trim().isNotEmpty) {
-      final q = query.trim().toLowerCase();
-      songs = songs.where((s) {
-        return s.title.toLowerCase().contains(q) ||
-            s.titleThanglish.toLowerCase().contains(q);
+    // 1. Refresh master cache if not loaded or forceRefresh is requested
+    if (_cachedSongs == null || forceRefresh) {
+      final uri = Uri.parse('$baseUrl${ApiConstants.songs}');
+      try {
+        final response = await _client.get(uri, headers: _buildHeaders()).timeout(
+          const Duration(seconds: 4),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final list = (data['songs'] as List<dynamic>?) ?? [];
+          _cachedSongs = list.map((item) {
+            return Song.fromJson(item as Map<String, dynamic>);
+          }).toList();
+        }
+      } catch (e) {
+        debugPrint('ApiService.fetchSongs master load fallback: $e');
+      }
+    }
+
+    // Source pool is cached songs or fallback to default songs
+    final pool = (_cachedSongs != null && _cachedSongs!.isNotEmpty)
+        ? _cachedSongs!
+        : MockData.defaultSongs;
+
+    // If query is empty, return all songs sorted by songNumber
+    if (query == null || query.trim().isEmpty) {
+      final all = pool.map((s) {
+        return s.copyWith(isFavorite: favIds.contains(s.id));
       }).toList();
+      all.sort((a, b) => a.songNumber.compareTo(b.songNumber));
+      return all;
     }
 
-    // Sort ascending by song number/title
-    songs.sort((a, b) => a.songNumber.compareTo(b.songNumber));
+    // 2. Perform comprehensive search (Song #, Tamil, and Thanglish)
+    final q = query.trim().toLowerCase();
+    final digits = q.replaceAll(RegExp(r'[^0-9]'), '');
+    final cleanText = q.replaceAll('#', '').trim();
 
-    // Update local favorite state
-    for (var s in songs) {
-      s.isFavorite = favIds.contains(s.id);
+    // Server-side query for text when digits are not the primary query
+    List<Song> serverMatches = [];
+    if (digits.isEmpty) {
+      try {
+        final uri = Uri.parse('$baseUrl${ApiConstants.songs}').replace(
+          queryParameters: {
+            'q': q,
+            'page': page.toString(),
+          },
+        );
+        final response = await _client.get(uri, headers: _buildHeaders()).timeout(
+          const Duration(seconds: 3),
+        );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final list = (data['songs'] as List<dynamic>?) ?? [];
+          serverMatches = list
+              .map((item) => Song.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (e) {
+        debugPrint('ApiService.fetchSongs server query note: $e');
+      }
     }
-    return songs;
+
+    final Map<int, Song> resultMap = {};
+
+    // First, add any server matches
+    for (final s in serverMatches) {
+      resultMap[s.id] = s;
+    }
+
+    // Filter master pool by number, title, and thanglish
+    for (final song in pool) {
+      final songNumStr = song.songNumber.toString();
+      final matchesNumber = digits.isNotEmpty &&
+          (songNumStr == digits ||
+              songNumStr.startsWith(digits) ||
+              songNumStr.contains(digits));
+      final matchesTitle = song.title.toLowerCase().contains(q) ||
+          (cleanText.isNotEmpty &&
+              song.title.toLowerCase().contains(cleanText));
+      final matchesThanglish = song.titleThanglish.toLowerCase().contains(q) ||
+          (cleanText.isNotEmpty &&
+              song.titleThanglish.toLowerCase().contains(cleanText));
+
+      if (matchesNumber || matchesTitle || matchesThanglish) {
+        resultMap[song.id] = song;
+      }
+    }
+
+    final results = resultMap.values.map((s) {
+      return s.copyWith(isFavorite: favIds.contains(s.id));
+    }).toList();
+
+    // Sort prioritizing exact song number match, then prefix match, then ascending number
+    results.sort((a, b) {
+      if (digits.isNotEmpty) {
+        final aExact = a.songNumber.toString() == digits;
+        final bExact = b.songNumber.toString() == digits;
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+
+        final aPrefix = a.songNumber.toString().startsWith(digits);
+        final bPrefix = b.songNumber.toString().startsWith(digits);
+        if (aPrefix && !bPrefix) return -1;
+        if (!aPrefix && bPrefix) return 1;
+      }
+      return a.songNumber.compareTo(b.songNumber);
+    });
+
+    return results;
   }
 
   /// GET /songs/:id
@@ -167,13 +240,23 @@ class ApiService {
       }
     }
 
-    // Fallback: Local Favorites
+    // Local Favorites (stored IDs matching live songs)
     final favIds = StorageService.getFavoriteIds();
-    final allSongs = MockData.defaultSongs;
-    return allSongs
-        .where((s) => favIds.contains(s.id))
-        .map((s) => s.copyWith(isFavorite: true))
-        .toList();
+    if (favIds.isEmpty) {
+      return [];
+    }
+
+    try {
+      final allSongs = await fetchSongs();
+      return allSongs
+          .where((s) => favIds.contains(s.id))
+          .map((s) => s.copyWith(isFavorite: true))
+          .toList();
+    } catch (e) {
+      debugPrint('ApiService.fetchFavorites local matching error: $e');
+    }
+
+    return [];
   }
 
   /// GET /notifications?page=
@@ -241,19 +324,26 @@ class ApiService {
   }
 
   /// GET /about_us
-  Future<AboutUs> fetchAboutUs() async {
+  Future<AboutUs?> fetchAboutUs({bool forceRefresh = false}) async {
+    if (_cachedAboutUs != null && !forceRefresh) {
+      return _cachedAboutUs;
+    }
+
     final uri = Uri.parse('$baseUrl${ApiConstants.aboutUs}');
     try {
       final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-        const Duration(seconds: 3),
+        const Duration(seconds: 5),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return AboutUs.fromJson(data);
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          _cachedAboutUs = AboutUs.fromJson(data);
+          return _cachedAboutUs;
+        }
       }
     } catch (e) {
-      debugPrint('ApiService.fetchAboutUs fallback: $e');
+      debugPrint('ApiService.fetchAboutUs error: $e');
     }
-    return MockData.defaultAboutUs;
+    return _cachedAboutUs;
   }
 }

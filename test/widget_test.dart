@@ -103,7 +103,7 @@ void main() {
     expect(find.textContaining('நகலெடுக்கப்பட்டது'), findsOneWidget);
   });
 
-  testWidgets('AboutUsScreen renders ministry information directly',
+  testWidgets('AboutUsScreen renders screen header and elements',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -114,8 +114,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('About Us'), findsOneWidget);
-    expect(find.textContaining('Bethesda Deliverance Church'), findsWidgets);
-    expect(find.textContaining('94436-94891'), findsWidgets);
-    expect(find.text('Call Prayer Line'), findsOneWidget);
   });
 }

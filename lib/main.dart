@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/services/storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize environment variables from .env asset
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('DotEnv load notice: $e');
+  }
 
   // Initialize offline persistent preferences
   await StorageService.init();

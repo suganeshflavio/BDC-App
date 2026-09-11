@@ -132,46 +132,62 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.favoriteRed.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.favorite_border_rounded,
-                size: 56,
-                color: AppColors.favoriteRed,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: AppColors.favoriteRed.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border_rounded,
+                        size: 56,
+                        color: AppColors.favoriteRed,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'விருப்பமான பாடல்கள் இல்லை',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.hindMadurai(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'பாடல்களில் உள்ள இதய குறியீட்டை அழுத்தி உங்கள் விருப்பமான பாடல்களை இங்கே சேர்க்கலாம்.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.hindMadurai(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 18),
-            Text(
-              'விருப்பமான பாடல்கள் இல்லை',
-              style: GoogleFonts.hindMadurai(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'முகப்புப் பக்கத்தில் உள்ள இதய குறியீட்டை அழுத்தி உங்கள் விருப்பமான பாடல்களை இங்கே சேர்க்கலாம்.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.hindMadurai(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

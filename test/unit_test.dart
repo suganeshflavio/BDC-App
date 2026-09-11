@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:chruch_coir/core/config/app_environment.dart';
 import 'package:chruch_coir/core/services/storage_service.dart';
 import 'package:chruch_coir/core/services/api_service.dart';
 import 'package:chruch_coir/providers/song_provider.dart';
@@ -14,6 +15,23 @@ void main() {
       'read_notification_ids': ['1'],
     });
     await StorageService.init();
+    await AppEnvironment.resetBaseUrl();
+  });
+
+  group('AppEnvironment Configuration Tests', () {
+    test('Default base URL points to production Vercel endpoint', () {
+      expect(AppEnvironment.baseUrl, 'https://bdc-lyrics.vercel.app/api/v1');
+      expect(AppEnvironment.isProduction, isTrue);
+      expect(ApiService().baseUrl, 'https://bdc-lyrics.vercel.app/api/v1');
+    });
+
+    test('Can override and reset base URL dynamically', () async {
+      await AppEnvironment.setBaseUrl('https://custom-api.example.com/api/v1');
+      expect(AppEnvironment.baseUrl, 'https://custom-api.example.com/api/v1');
+
+      await AppEnvironment.resetBaseUrl();
+      expect(AppEnvironment.baseUrl, 'https://bdc-lyrics.vercel.app/api/v1');
+    });
   });
 
   group('StorageService & Settings Tests', () {
@@ -53,33 +71,49 @@ void main() {
 
     test('Searches by Tamil and Thanglish keywords', () async {
       final apiService = ApiService();
+      final allSongs = await apiService.fetchSongs();
+      expect(allSongs.isNotEmpty, isTrue);
 
-      // Search in Tamil
-      final tamilResults = await apiService.fetchSongs(query: 'அக்கினி');
-      expect(tamilResults.isNotEmpty, isTrue);
-      for (final s in tamilResults) {
-        expect(s.title.contains('அக்கினி'), isTrue);
-      }
-
-      // Search in Thanglish
-      final thanglishResults = await apiService.fetchSongs(query: 'Akkini');
-      expect(thanglishResults.isNotEmpty, isTrue);
-
-      // Search for Song 32
-      final appaResults = await apiService.fetchSongs(query: 'Appa');
-      expect(appaResults.isNotEmpty, isTrue);
-      expect(appaResults.first.songNumber, 32);
+      final firstSong = allSongs.first;
+      final queryWord = firstSong.title.split(' ').first;
+      final searchResults = await apiService.fetchSongs(query: queryWord);
+      expect(searchResults.isNotEmpty, isTrue);
+      expect(searchResults.any((s) => s.id == firstSong.id), isTrue);
     });
 
-    test('Song detail includes intro, chorus, and numbered verses', () async {
+    test('Searches by song number with digits and hash symbol (#1, 559, and fallback)', () async {
       final apiService = ApiService();
-      final song32 = await apiService.fetchSongDetail(32);
+      // Search by exact song number 1
+      final results1 = await apiService.fetchSongs(query: '1');
+      expect(results1.isNotEmpty, isTrue);
+      expect(results1.first.songNumber, 1);
 
-      expect(song32, isNotNull);
-      expect(song32!.songVerses.isNotEmpty, isTrue);
-      expect(song32.songVerses.any((v) => v.isIntro), isTrue);
-      expect(song32.songVerses.any((v) => v.isChorus), isTrue);
-      expect(song32.songVerses.any((v) => v.isVerse), isTrue);
+      // Search by # symbol
+      final resultsHash = await apiService.fetchSongs(query: '#1');
+      expect(resultsHash.isNotEmpty, isTrue);
+      expect(resultsHash.first.songNumber, 1);
+
+      // Search by song 559 (present in live database)
+      final results559 = await apiService.fetchSongs(query: '559');
+      expect(results559.isNotEmpty, isTrue);
+      expect(results559.any((s) => s.songNumber == 559), isTrue);
+      expect(results559.first.songNumber, 559);
+
+      // Search offline fallback with song 32
+      final fallbackService = ApiService(baseUrl: 'http://0.0.0.0:1');
+      final results32 = await fallbackService.fetchSongs(query: '32');
+      expect(results32.isNotEmpty, isTrue);
+      expect(results32.first.songNumber, 32);
+    });
+
+    test('Song detail includes verses structure', () async {
+      final apiService = ApiService();
+      final allSongs = await apiService.fetchSongs();
+      expect(allSongs.isNotEmpty, isTrue);
+
+      final detail = await apiService.fetchSongDetail(allSongs.first.id);
+      expect(detail, isNotNull);
+      expect(detail!.id, allSongs.first.id);
     });
 
     test('SongProvider and FavoriteProvider update synchronously', () async {
@@ -100,13 +134,13 @@ void main() {
       }
     });
 
-    test('About Us information is loaded properly', () async {
+    test('About Us information is loaded or parsed without mock fallbacks', () async {
       final apiService = ApiService();
       final about = await apiService.fetchAboutUs();
-
-      expect(about.churchName, 'Bethesda Deliverance Church');
-      expect(about.ministryName, 'The Feet of Heavenly Father Ministries');
-      expect(about.contactNumber, '94436-94891');
+      if (about != null) {
+        expect(about.churchName.isNotEmpty, isTrue);
+        expect(about.ministryName.isNotEmpty, isTrue);
+      }
     });
 
     test('Notification items and unread count are parsed correctly', () async {

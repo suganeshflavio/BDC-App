@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/api_service.dart';
+import '../../models/about_us.dart';
 import '../../providers/song_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -28,36 +30,38 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final PageController _bannerController;
+  late final ApiService _apiService;
+  AboutUs? _aboutUs;
   int _currentBannerIndex = 0;
   Timer? _bannerTimer;
 
-  final List<Map<String, dynamic>> _banners = [
+  List<Map<String, dynamic>> get _banners => [
     {
       'badge': 'SONG BOOK',
       'title': 'பரமனின் கீதங்கள்',
       'subtitle': 'Explore 120+ Christian Hymns, Chorus & Verses',
-      'gradient': [Color(0xFF1E1B38), Color(0xFF384370), Color(0xFFC15063)],
+      'gradient': [const Color(0xFF1E1B38), const Color(0xFF384370), const Color(0xFFC15063)],
       'icon': Icons.music_note_rounded,
     },
     {
       'badge': 'SUNDAY SERVICE',
       'title': 'ஞாயிறு ஆராதனை',
       'subtitle': 'Join live worship & prophetic sermons every Sunday',
-      'gradient': [Color(0xFF0F2B48), Color(0xFF1E5B7E), Color(0xFFF6B071)],
+      'gradient': [const Color(0xFF0F2B48), const Color(0xFF1E5B7E), const Color(0xFFF6B071)],
       'icon': Icons.church_rounded,
     },
     {
       'badge': 'FASTING PRAYER',
       'title': 'வெள்ளி உபவாச ஜெபம்',
       'subtitle': 'Special fasting & deliverance healing prayer service',
-      'gradient': [Color(0xFF2E1C38), Color(0xFF6F3B68), Color(0xFFEAA15A)],
+      'gradient': [const Color(0xFF2E1C38), const Color(0xFF6F3B68), const Color(0xFFEAA15A)],
       'icon': Icons.volunteer_activism_rounded,
     },
     {
       'badge': '24/7 PRAYER LINE',
       'title': 'ஜெப உதவி மையம்',
-      'subtitle': 'Contact Pastor & Prayer Warriors: 94436-94891',
-      'gradient': [Color(0xFF1B3B2B), Color(0xFF2E6B4F), Color(0xFFFDD993)],
+      'subtitle': 'Contact Pastor & Prayer Warriors: ${_aboutUs?.contactNumber.isNotEmpty == true ? _aboutUs!.contactNumber : '94436-94891'}',
+      'gradient': [const Color(0xFF1B3B2B), const Color(0xFF2E6B4F), const Color(0xFFFDD993)],
       'icon': Icons.phone_in_talk_rounded,
     },
   ];
@@ -65,13 +69,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _apiService = ApiService();
     _bannerController = PageController();
     _startBannerAutoScroll();
+    _loadAboutUs();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.songProvider.songs.isEmpty) {
         widget.songProvider.loadSongs();
       }
     });
+  }
+
+  Future<void> _loadAboutUs({bool forceRefresh = false}) async {
+    final info = await _apiService.fetchAboutUs(forceRefresh: forceRefresh);
+    if (mounted && info != null) {
+      setState(() {
+        _aboutUs = info;
+      });
+    }
   }
 
   void _startBannerAutoScroll() {
@@ -106,8 +121,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _callPrayerHelpline() async {
-    final uri = Uri.parse('tel:9443694891');
+  Future<void> _callPrayerHelpline([String? customPhone]) async {
+    final phone = customPhone ?? _aboutUs?.contactNumber ?? '94436-94891';
+    final cleaned = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    final uri = Uri.parse('tel:$cleaned');
     try {
       await launchUrl(uri);
     } catch (e) {
@@ -162,7 +179,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           body: RefreshIndicator(
             color: AppColors.sunriseGold,
-            onRefresh: () => widget.songProvider.loadSongs(),
+            onRefresh: () => Future.wait([
+              widget.songProvider.loadSongs(forceRefresh: true),
+              _loadAboutUs(forceRefresh: true),
+            ]),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
@@ -175,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 16),
 
-                  // 2. CHURCH DETAILS CARD WITH IMAGE
+                  // 2. CHURCH DETAILS CARD WITH IMAGE (Dynamic About Us API)
                   _buildChurchDetailsCard(),
 
                   const SizedBox(height: 20),
@@ -248,19 +268,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             foregroundColor: AppColors.primary,
                             side: BorderSide(
                               color: AppColors.sunriseGold.withValues(alpha: 0.8),
-                              width: 1.4,
+                              width: 1.5,
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
                     ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -270,107 +289,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 1. Welcome & Greeting Card: "Hello Welcome, Praise the Lord!"
+  // 1. Welcome & Greeting Top Header (Disabled)
   // Widget _buildWelcomeHeader() {
-  //   return Container(
-  //     margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-  //     padding: const EdgeInsets.all(18),
-  //     decoration: BoxDecoration(
-  //       gradient: LinearGradient(
-  //         colors: [
-  //           AppColors.primaryDark,
-  //           AppColors.primaryLight,
-  //           AppColors.celestialBlue,
-  //         ],
-  //         begin: Alignment.topLeft,
-  //         end: Alignment.bottomRight,
-  //       ),
-  //       borderRadius: BorderRadius.circular(20),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: AppColors.primaryDark.withValues(alpha: 0.25),
-  //           blurRadius: 12,
-  //           offset: const Offset(0, 5),
-  //         ),
-  //       ],
-  //     ),
-  //     child: Row(
-  //       crossAxisAlignment: CrossAxisAlignment.center,
-  //       children: [
-  //         // Church App Logo Avatar
-  //         Container(
-  //           width: 50,
-  //           height: 50,
-  //           padding: const EdgeInsets.all(2),
-  //           decoration: BoxDecoration(
-  //             gradient: const LinearGradient(
-  //               colors: [AppColors.sunriseGold, AppColors.amberGlow],
-  //               begin: Alignment.topLeft,
-  //               end: Alignment.bottomRight,
-  //             ),
-  //             shape: BoxShape.circle,
-  //             boxShadow: [
-  //               BoxShadow(
-  //                 color: AppColors.sunriseGold.withValues(alpha: 0.4),
-  //                 blurRadius: 10,
-  //                 offset: const Offset(0, 3),
-  //               ),
-  //             ],
-  //           ),
-  //           child: ClipOval(
-  //             child: Container(
-  //               color: const Color(0xFF0F172A),
-  //               padding: const EdgeInsets.all(3),
-  //               child: Image.asset(
-  //                 'assets/images/app_logo.png',
-  //                 fit: BoxFit.contain,
-  //               ),
-  //             ),
-  //           ),
-  //         ),
-  //         const SizedBox(width: 14),
-
-  //         // Greeting text
-  //         Expanded(
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Text(
-  //                 'Praise the Lord! • கர்த்தருக்கு ஸ்தோத்திரம்',
-  //                 style: GoogleFonts.hindMadurai(
-  //                   fontSize: 14,
-  //                   fontWeight: FontWeight.w600,
-  //                   color: AppColors.amberGlow,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 3),
-  //               Text(
-  //                 'Hello & Welcome!',
-  //                 style: GoogleFonts.poppins(
-  //                   fontSize: 20,
-  //                   fontWeight: FontWeight.bold,
-  //                   color: Colors.white,
-  //                   letterSpacing: 0.2,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 2),
-  //               Text(
-  //                 'Sing praises to His holy name with joyful heart',
-  //                 style: GoogleFonts.poppins(
-  //                   fontSize: 11,
-  //                   color: Colors.white.withValues(alpha: 0.75),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
+  //   return Container( ... );
   // }
 
-  /// 2. Church Details Card with Church Image
+  /// 2. Church Details Card with Church Image (Loaded from About Us API)
   Widget _buildChurchDetailsCard() {
+    final churchName = _aboutUs?.churchName.isNotEmpty == true
+        ? _aboutUs!.churchName
+        : 'Bethesda Deliverance Church';
+    final ministryName = _aboutUs?.ministryName.isNotEmpty == true
+        ? _aboutUs!.ministryName
+        : 'The Feet of Heavenly Father Ministries';
+    final description = _aboutUs?.description.isNotEmpty == true
+        ? _aboutUs!.description
+        : 'Join Bethesda Deliverance Church Family in Erode for uplifting sermons, live worship and real-life testimonies that strengthen faith.';
+    final contactNumber = _aboutUs?.contactNumber.isNotEmpty == true
+        ? _aboutUs!.contactNumber
+        : '94436-94891';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -428,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Bethesda Deliverance Church',
+                        churchName,
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -461,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'The Feet of Heavenly Father Ministries',
+                  ministryName,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -470,24 +408,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'இந்த ஊழியத்தின் மூலமாக "பரமனின் கீதங்கள்" பாடல் செயலியை வெளியிடுவதில் மகிழ்ச்சியடைகிறோம்.',
-                  style: GoogleFonts.hindMadurai(
+                  description,
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     color: AppColors.textPrimary,
-                    height: 1.4,
+                    height: 1.45,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
                 // Quick Call & Helpline Row
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _callPrayerHelpline,
+                        onPressed: () => _callPrayerHelpline(contactNumber),
                         icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
                         label: Text(
-                          'Prayer Line: 94436-94891',
+                          'Prayer Line: $contactNumber',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

@@ -18,14 +18,17 @@ class SongProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   String? get errorMessage => _errorMessage;
 
-  Future<void> loadSongs({String? query}) async {
+  Future<void> loadSongs({String? query, bool forceRefresh = false}) async {
     _isLoading = true;
     _searchQuery = query ?? '';
     _errorMessage = null;
     notifyListeners();
 
     try {
-      _songs = await _apiService.fetchSongs(query: query);
+      _songs = await _apiService.fetchSongs(
+        query: query,
+        forceRefresh: forceRefresh,
+      );
     } catch (e) {
       _errorMessage = 'Failed to load songs: $e';
     } finally {

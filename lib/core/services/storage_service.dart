@@ -14,7 +14,7 @@ class StorageService {
 
   // Favorite Songs
   static Set<int> getFavoriteIds() {
-    final list = _prefs?.getStringList(_keyFavorites) ?? ['4', '5', '32'];
+    final list = _prefs?.getStringList(_keyFavorites) ?? <String>[];
     return list.map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
   }
 

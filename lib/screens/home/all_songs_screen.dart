@@ -87,7 +87,7 @@ class _AllSongsScreenState extends State<AllSongsScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                   )
                 : null,
-            titleSpacing: 0,
+            titleSpacing: (widget.showBackButton ?? Navigator.of(context).canPop()) ? 0 : 16,
             title: _isSearchOpen
                 ? _buildSearchField()
                 : Column(
@@ -128,7 +128,7 @@ class _AllSongsScreenState extends State<AllSongsScreen> {
                   });
                 },
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
             ],
           ),
           body: RefreshIndicator(
@@ -137,6 +137,7 @@ class _AllSongsScreenState extends State<AllSongsScreen> {
               query: _searchController.text.isNotEmpty
                   ? _searchController.text
                   : null,
+              forceRefresh: true,
             ),
             child: isLoading && songs.isEmpty
                 ? const Center(
@@ -193,77 +194,156 @@ class _AllSongsScreenState extends State<AllSongsScreen> {
   }
 
   Widget _buildSearchField() {
-    return TextField(
-      controller: _searchController,
-      autofocus: true,
-      style: GoogleFonts.poppins(color: Colors.white, fontSize: 15),
-      cursorColor: AppColors.sunriseGold,
-      decoration: InputDecoration(
-        hintText: 'Search Tamil (அக்கினி) or Thanglish...',
-        hintStyle: GoogleFonts.poppins(
-          color: Colors.white.withValues(alpha: 0.6),
-          fontSize: 13,
+    return Container(
+      height: 42,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.sunriseGold.withValues(alpha: 0.35),
+          width: 1,
         ),
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        filled: false,
       ),
-      onChanged: (val) {
-        widget.songProvider.loadSongs(query: val);
-      },
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.search_rounded,
+            color: AppColors.amberGlow,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              autofocus: true,
+              style: GoogleFonts.poppins(color: Colors.black, fontSize: 14),
+              cursorColor: AppColors.sunriseGold,
+              decoration: InputDecoration(
+                hintText: 'Search here...',
+                hintStyle: GoogleFonts.poppins(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  fontSize: 11,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (val) {
+                widget.songProvider.loadSongs(query: val);
+              },
+            ),
+          ),
+          if (_searchController.text.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                widget.songProvider.loadSongs(query: null);
+                setState(() {});
+              },
+              child: Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Icon(
+                  Icons.cancel_rounded,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  size: 18,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: AppColors.textMuted.withValues(alpha: 0.5),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-            const SizedBox(height: 16),
-            Text(
-              'பாடல்கள் எதுவும் கிடைக்கவில்லை',
-              style: GoogleFonts.hindMadurai(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'No songs found matching "${_searchController.text}"',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                _searchController.clear();
-                widget.songProvider.loadSongs(query: null);
-                setState(() => _isSearchOpen = false);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryDark,
-                foregroundColor: AppColors.amberGlow,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 36.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        color: AppColors.sunriseGold.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.search_off_rounded,
+                        size: 54,
+                        color: AppColors.sunriseAmber,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'பாடல்கள் எதுவும் கிடைக்கவில்லை',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.hindMadurai(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _searchController.text.trim().isNotEmpty
+                          ? 'No songs found matching "${_searchController.text.trim()}"'
+                          : 'No songs available in catalog',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _searchController.clear();
+                        widget.songProvider.loadSongs(query: null);
+                        setState(() => _isSearchOpen = false);
+                      },
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: Text(
+                        // 'அனைத்து பாடல்களையும் காட்டு',
+                        "Show all",
+                        style: GoogleFonts.hindMadurai(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryDark,
+                        foregroundColor: AppColors.amberGlow,
+                        elevation: 3,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 26,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: const Text('அனைத்து பாடல்களையும் காட்டு'),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

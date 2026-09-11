@@ -40,6 +40,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
   }
 
   Future<void> _loadAboutUs() async {
+    setState(() => _isLoading = true);
     final info = await _apiService.fetchAboutUs();
     if (mounted) {
       setState(() {
@@ -117,310 +118,309 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                 color: AppColors.sunriseGold,
               ),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 8),
-
-                  // 1. Church Banner Card
-                  Container(
-                    width: double.infinity,
-                    constraints: const BoxConstraints(maxWidth: 380),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF0F172A),
-                          Color(0xFF1E293B),
-                          Color(0xFF14243F),
-                        ],
+          : RefreshIndicator(
+              color: AppColors.sunriseGold,
+              onRefresh: _loadAboutUs,
+              child: (_aboutUs == null || _aboutUs!.isEmpty)
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryDark.withValues(alpha: 0.15),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
+                      padding: const EdgeInsets.all(32),
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 56,
+                                  color: AppColors.textMuted,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'தகவல் கிடைக்கவில்லை',
+                                  style: GoogleFonts.hindMadurai(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Pull down to refresh church information.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: _loadAboutUs,
+                                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                                  label: const Text('மீண்டும் புதுப்பிக்கவும்'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryDark,
+                                    foregroundColor: AppColors.amberGlow,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
-                      border: Border.all(color: AppColors.cardBorder),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: Image.asset(
-                        'assets/images/church_logo.png',
-                        fit: BoxFit.contain,
+                    )
+                  : SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
                       ),
-                    ),
-                  ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 8),
 
-                  const SizedBox(height: 20),
-
-                  // 2. Emblem & Ministry Profile
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFF0F172A),
-                          border: Border.all(
-                            color: AppColors.sunriseGold,
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.sunriseGold.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
+                          // 1. Church Banner Card
+                          Container(
+                            width: double.infinity,
+                            constraints: const BoxConstraints(maxWidth: 380),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF0F172A),
+                                  Color(0xFF1E293B),
+                                  Color(0xFF14243F),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryDark.withValues(alpha: 0.15),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                              border: Border.all(color: AppColors.cardBorder),
                             ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/app_logo.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _aboutUs?.ministryName ??
-                                  'The Feet of heavenly Father Ministries',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primaryDark,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.asset(
+                                'assets/images/church_logo.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.sunriseGold.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _aboutUs?.churchName ??
-                                    'Bethesda Deliverance Church',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // 2. Emblem & Ministry Profile
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF0F172A),
+                                  border: Border.all(
+                                    color: AppColors.sunriseGold,
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.sunriseGold.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(4),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/images/app_logo.png',
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 14),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_aboutUs?.ministryName.isNotEmpty == true)
+                                      Text(
+                                        _aboutUs!.ministryName,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primaryDark,
+                                        ),
+                                      ),
+                                    if (_aboutUs?.churchName.isNotEmpty == true) ...[
+                                      const SizedBox(height: 3),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.sunriseGold.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          _aboutUs!.churchName,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 22),
+
+                          // 3. Tamil Dedication Card
+                          if (_aboutUs?.description.isNotEmpty == true) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppColors.sunriseGold.withValues(alpha: 0.4),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.sunriseGold.withValues(alpha: 0.06),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.menu_book_rounded,
+                                        color: AppColors.sunriseAmber,
+                                        size: 22,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'பரமனின் கீதங்கள்',
+                                        style: GoogleFonts.hindMadurai(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.primaryDark,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    _aboutUs!.description,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.hindMadurai(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.textPrimary,
+                                      height: 1.65,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(height: 20),
                           ],
-                        ),
-                      ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 22),
-
-                  // 3. Tamil Dedication Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: AppColors.sunriseGold.withValues(alpha: 0.4),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.sunriseGold.withValues(alpha: 0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.menu_book_rounded,
-                              color: AppColors.sunriseAmber,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'பரமனின் கீதங்கள்',
-                              style: GoogleFonts.hindMadurai(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primaryDark,
+                          // 5. 24/7 Prayer Helpline Card
+                          if (_aboutUs?.contactNumber.isNotEmpty == true) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    AppColors.primaryDark,
+                                    AppColors.primary,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primaryDark.withValues(alpha: 0.25),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'மேலும் விவரங்கள் அறிய மற்றும் ஜெப உதவிக்கு:',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.hindMadurai(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _aboutUs!.contactNumber,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.amberGlow,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _callHelpline(_aboutUs!.contactNumber),
+                                    icon: const Icon(Icons.phone_in_talk_rounded, size: 18),
+                                    label: Text(
+                                      'Call Prayer Line',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.sunriseGold,
+                                      foregroundColor: AppColors.primaryDark,
+                                      elevation: 2,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 22,
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _aboutUs?.description ??
-                              'இந்த ஊழியத்தின் மூலமாக "பரமனின் கீதங்கள்" என்ற பாடல் செயலியை வெளியிடுவதில் மகிழ்ச்சியடைகிறோம். இப்பாடல்கள் யாவும் தேவ நாம மகிமைக்காகவும் உங்கள் ஆவிக்குரிய வளர்ச்சிக்காகவும் அர்ப்பணிக்கப்படுகிறது.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.hindMadurai(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.textPrimary,
-                            height: 1.65,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // 4. Church Service Timings Card
-                  // Container(
-                  //   width: double.infinity,
-                  //   padding: const EdgeInsets.all(18),
-                  //   decoration: BoxDecoration(
-                  //     color: AppColors.cardBackground,
-                  //     borderRadius: BorderRadius.circular(18),
-                  //     border: Border.all(color: AppColors.cardBorder),
-                  //     boxShadow: [
-                  //       BoxShadow(
-                  //         color: AppColors.primaryDark.withValues(alpha: 0.04),
-                  //         blurRadius: 10,
-                  //         offset: const Offset(0, 3),
-                  //       ),
-                  //     ],
-                  //   ),
-                  //   child: Column(
-                  //     crossAxisAlignment: CrossAxisAlignment.start,
-                  //     children: [
-                  //       Row(
-                  //         children: [
-                  //           Container(
-                  //             padding: const EdgeInsets.all(8),
-                  //             decoration: BoxDecoration(
-                  //               color: AppColors.primaryLight.withValues(alpha: 0.1),
-                  //               shape: BoxShape.circle,
-                  //             ),
-                  //             child: const Icon(
-                  //               Icons.church_rounded,
-                  //               color: AppColors.primary,
-                  //               size: 20,
-                  //             ),
-                  //           ),
-                  //           const SizedBox(width: 12),
-                  //           Text(
-                  //             'ஆராதனை நேரங்கள் • Services',
-                  //             style: GoogleFonts.poppins(
-                  //               fontSize: 15,
-                  //               fontWeight: FontWeight.w600,
-                  //               color: AppColors.primaryDark,
-                  //             ),
-                  //           ),
-                  //         ],
-                  //       ),
-                  //       const SizedBox(height: 14),
-                  //       _buildServiceRow(
-                  //         day: 'ஞாயிறு ஆராதனை (Sunday Worship)',
-                  //         time: '9:00 AM – 12:30 PM',
-                  //         icon: Icons.wb_sunny_outlined,
-                  //       ),
-                  //       const Divider(color: AppColors.cardBorder, height: 18),
-                  //       _buildServiceRow(
-                  //         day: 'வெள்ளி உபவாசம் (Friday Fasting)',
-                  //         time: '10:00 AM – 1:00 PM',
-                  //         icon: Icons.volunteer_activism_outlined,
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-
-                  const SizedBox(height: 20),
-
-                  // 5. 24/7 Prayer Helpline Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          AppColors.primaryDark,
-                          AppColors.primary,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primaryDark.withValues(alpha: 0.25),
-                          blurRadius: 14,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'மேலும் விவரங்கள் அறிய மற்றும் ஜெப உதவிக்கு:',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.hindMadurai(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _aboutUs?.contactNumber ?? '94436-94891',
-                          style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.amberGlow,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        ElevatedButton.icon(
-                          onPressed: () => _callHelpline(
-                            _aboutUs?.contactNumber ?? '94436-94891',
-                          ),
-                          icon: const Icon(Icons.phone_in_talk_rounded, size: 18),
-                          label: Text(
-                            'Call Prayer Line',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.sunriseGold,
-                            foregroundColor: AppColors.primaryDark,
-                            elevation: 2,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 22,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
 
                   // 6. Font Size Preference Card (if settingsProvider present)
                   if (widget.settingsProvider != null) ...[
@@ -532,37 +532,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _buildServiceRow({
-    required String day,
-    required String time,
-    required IconData icon,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.sunriseAmber),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            day,
-            style: GoogleFonts.hindMadurai(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        Text(
-          time,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.primaryDark,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
