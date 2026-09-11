@@ -40,10 +40,16 @@ class AppEnvironment {
   static String get baseUrl {
     final customUrl = StorageService.getCustomBaseUrl();
     if (customUrl != null && customUrl.trim().isNotEmpty) {
-      // If a legacy local subnet IP (192.168.x.x) is stored from previous debugging,
+      final trimmed = customUrl.trim();
+      final lower = trimmed.toLowerCase();
+      // If a legacy local subnet IP, localhost, or emulator IP was stored from previous debugging,
       // bypass it to avoid blocking access to production.
-      if (!customUrl.contains('192.168.')) {
-        return customUrl.trim();
+      final isLocal = lower.contains('192.168.') ||
+          lower.contains('10.0.2.2') ||
+          lower.contains('localhost') ||
+          lower.contains('127.0.0.1');
+      if (!isLocal) {
+        return trimmed;
       }
     }
     return defaultUrl;

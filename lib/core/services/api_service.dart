@@ -9,6 +9,7 @@ import '../../models/about_us.dart';
 import 'storage_service.dart';
 
 class ApiService {
+  static const Duration _timeout = Duration(seconds: 10);
   final String? _customBaseUrl;
   final http.Client _client;
 
@@ -51,7 +52,7 @@ class ApiService {
       final uri = Uri.parse('$baseUrl${ApiConstants.songs}');
       try {
         final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-          const Duration(seconds: 4),
+          _timeout,
         );
 
         if (response.statusCode == 200) {
@@ -96,7 +97,7 @@ class ApiService {
           },
         );
         final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-          const Duration(seconds: 3),
+          _timeout,
         );
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -165,7 +166,7 @@ class ApiService {
 
     try {
       final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-        const Duration(seconds: 3),
+        _timeout,
       );
 
       if (response.statusCode == 200) {
@@ -224,7 +225,7 @@ class ApiService {
           queryParameters: {'page': page.toString()},
         );
         final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-          const Duration(seconds: 3),
+          _timeout,
         );
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -267,7 +268,7 @@ class ApiService {
 
     try {
       final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-        const Duration(seconds: 3),
+        _timeout,
       );
 
       if (response.statusCode == 200) {
@@ -332,7 +333,7 @@ class ApiService {
     final uri = Uri.parse('$baseUrl${ApiConstants.aboutUs}');
     try {
       final response = await _client.get(uri, headers: _buildHeaders()).timeout(
-        const Duration(seconds: 5),
+        _timeout,
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
