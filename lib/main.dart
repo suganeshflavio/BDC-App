@@ -37,7 +37,7 @@ class ParamaninKeethangalApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'பரமனின் கீதங்கள் - Paramanin Keethangal',
+      title: 'பரமனின் கீதங்கள்',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),

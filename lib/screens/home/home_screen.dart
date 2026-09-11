@@ -150,16 +150,16 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Paramanin Keethangal',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  'பரமனின் கீதங்கள்',
+                  style: GoogleFonts.hindMadurai(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: 0.3,
                   ),
                 ),
                 Text(
-                  'பரமனின் கீதங்கள் • பாடல் செயலி',
+                  'Paramanin Keethangal • பாடல் செயலி',
                   style: GoogleFonts.hindMadurai(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,

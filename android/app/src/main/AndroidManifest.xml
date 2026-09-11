@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="chruch_coir"
+        android:label="பரமனின் கீதங்கள்"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

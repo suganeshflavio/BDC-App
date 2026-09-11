@@ -100,9 +100,9 @@ class SettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Paramanin Keethangal',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
+                              'பரமனின் கீதங்கள்',
+                              style: GoogleFonts.hindMadurai(
+                                fontSize: 17,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primaryDark,
                               ),
@@ -307,9 +307,9 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Paramanin Keethangal • Version 1.0.0',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
+                        'பரமனின் கீதங்கள் • Version 1.0.0',
+                        style: GoogleFonts.hindMadurai(
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: AppColors.textSecondary,
                         ),

@@ -1,11 +1,11 @@
 {
-    "name": "chruch_coir",
-    "short_name": "chruch_coir",
+    "name": "பரமனின் கீதங்கள்",
+    "short_name": "பரமனின் கீதங்கள்",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "பரமனின் கீதங்கள்",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
