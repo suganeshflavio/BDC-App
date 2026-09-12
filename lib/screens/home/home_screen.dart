@@ -11,6 +11,7 @@ import '../../providers/settings_provider.dart';
 import '../lyrics/lyrics_screen.dart';
 import 'all_songs_screen.dart';
 import 'widgets/song_card.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class HomeScreen extends StatefulWidget {
   final SongProvider songProvider;
@@ -210,16 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 8),
 
-                  // 5. LIST 3 LATEST ADDED SONGS
                   if (isLoading && songs.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: CircularProgressIndicator(
-                          color: AppColors.sunriseGold,
-                        ),
-                      ),
-                    )
+                    const SongListSkeleton(count: 3, shrinkWrap: true)
                   else if (latestThreeSongs.isEmpty)
                     _buildEmptySongsPlaceholder()
                   else

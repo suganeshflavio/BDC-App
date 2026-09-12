@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
-import '../data/mock_data.dart';
 import '../../models/song.dart';
 import '../../models/notification_item.dart';
 import '../../models/about_us.dart';
@@ -67,13 +66,12 @@ class ApiService {
       }
     }
 
-    // Source pool is cached songs or fallback to default songs
-    final pool = (_cachedSongs != null && _cachedSongs!.isNotEmpty)
-        ? _cachedSongs!
-        : MockData.defaultSongs;
+    // Source pool is cached songs
+    final pool = _cachedSongs ?? [];
 
     // If query is empty, return all songs sorted by songNumber
     if (query == null || query.trim().isEmpty) {
+      if (pool.isEmpty) return [];
       final all = pool.map((s) {
         return s.copyWith(isFavorite: favIds.contains(s.id));
       }).toList();
@@ -180,14 +178,15 @@ class ApiService {
       debugPrint('ApiService.fetchSongDetail fallback: $e');
     }
 
-    // Offline Fallback
-    final favIds = StorageService.getFavoriteIds();
-    final found = MockData.defaultSongs.firstWhere(
-      (s) => s.id == songId,
-      orElse: () => MockData.defaultSongs.first,
-    );
-    final songCopy = found.copyWith(isFavorite: favIds.contains(found.id));
-    return songCopy;
+    // Fallback to cached songs if available
+    if (_cachedSongs != null && _cachedSongs!.isNotEmpty) {
+      final favIds = StorageService.getFavoriteIds();
+      final matches = _cachedSongs!.where((s) => s.id == songId);
+      if (matches.isNotEmpty) {
+        return matches.first.copyWith(isFavorite: favIds.contains(matches.first.id));
+      }
+    }
+    return null;
   }
 
   /// Toggle Favorite POST / DELETE /songs/:id/favorite
@@ -295,16 +294,9 @@ class ApiService {
       debugPrint('ApiService.fetchNotifications fallback: $e');
     }
 
-    // Fallback
-    final readIds = StorageService.getReadNotificationIds();
-    final items = MockData.defaultNotifications.map((n) {
-      return n.copyWith(isRead: readIds.contains(n.id));
-    }).toList();
-
-    final unread = items.where((n) => !n.isRead).length;
     return {
-      'notifications': items,
-      'unread_count': unread,
+      'notifications': <NotificationItem>[],
+      'unread_count': 0,
     };
   }
 

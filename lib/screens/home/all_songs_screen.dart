@@ -6,6 +6,7 @@ import '../../providers/favorite_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../lyrics/lyrics_screen.dart';
 import 'widgets/song_card.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class AllSongsScreen extends StatefulWidget {
   final SongProvider songProvider;
@@ -140,10 +141,9 @@ class _AllSongsScreenState extends State<AllSongsScreen> {
               forceRefresh: true,
             ),
             child: isLoading && songs.isEmpty
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.sunriseGold,
-                    ),
+                ? const SongListSkeleton(
+                    count: 8,
+                    padding: EdgeInsets.only(top: 10, bottom: 90),
                   )
                 : songs.isEmpty
                     ? _buildEmptyState()

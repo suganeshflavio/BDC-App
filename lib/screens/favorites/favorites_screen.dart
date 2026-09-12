@@ -6,6 +6,7 @@ import '../../providers/song_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../lyrics/lyrics_screen.dart';
 import '../home/widgets/song_card.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class FavoritesScreen extends StatefulWidget {
   final FavoriteProvider favoriteProvider;
@@ -73,10 +74,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             color: AppColors.sunriseGold,
             onRefresh: () => widget.favoriteProvider.loadFavorites(),
             child: isLoading && favorites.isEmpty
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.sunriseGold,
-                    ),
+                ? const SongListSkeleton(
+                    count: 6,
+                    padding: EdgeInsets.only(top: 10, bottom: 90),
                   )
                 : favorites.isEmpty
                     ? _buildEmptyState()

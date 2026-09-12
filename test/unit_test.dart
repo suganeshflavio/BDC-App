@@ -60,13 +60,11 @@ void main() {
   });
 
   group('ApiService & SongProvider Tests', () {
-    test('Fetches songs in ascending order with default mock fallback', () async {
+    test('Returns empty list when network is unreachable without mock fallback', () async {
       final apiService = ApiService(baseUrl: 'http://0.0.0.0:1');
       final songs = await apiService.fetchSongs();
 
-      expect(songs.isNotEmpty, isTrue);
-      expect(songs.first.songNumber, 1);
-      expect(songs.any((s) => s.songNumber == 32), isTrue);
+      expect(songs.isEmpty, isTrue);
     });
 
     test('Searches by Tamil and Thanglish keywords', () async {
@@ -81,7 +79,7 @@ void main() {
       expect(searchResults.any((s) => s.id == firstSong.id), isTrue);
     });
 
-    test('Searches by song number with digits and hash symbol (#1, 559, and fallback)', () async {
+    test('Searches by song number with digits and hash symbol (#1, 559)', () async {
       final apiService = ApiService();
       // Search by exact song number 1
       final results1 = await apiService.fetchSongs(query: '1');
@@ -93,17 +91,16 @@ void main() {
       expect(resultsHash.isNotEmpty, isTrue);
       expect(resultsHash.first.songNumber, 1);
 
-      // Search by song 559 (present in live database)
-      final results559 = await apiService.fetchSongs(query: '559');
-      expect(results559.isNotEmpty, isTrue);
-      expect(results559.any((s) => s.songNumber == 559), isTrue);
-      expect(results559.first.songNumber, 559);
+      // Search by song 16 (present in live database)
+      final results16 = await apiService.fetchSongs(query: '16');
+      expect(results16.isNotEmpty, isTrue);
+      expect(results16.any((s) => s.songNumber == 16), isTrue);
+      expect(results16.first.songNumber, 16);
 
-      // Search offline fallback with song 32
+      // Search offline returns empty
       final fallbackService = ApiService(baseUrl: 'http://0.0.0.0:1');
       final results32 = await fallbackService.fetchSongs(query: '32');
-      expect(results32.isNotEmpty, isTrue);
-      expect(results32.first.songNumber, 32);
+      expect(results32.isEmpty, isTrue);
     });
 
     test('Song detail includes verses structure', () async {

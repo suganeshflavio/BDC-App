@@ -6,6 +6,7 @@ import '../../core/services/api_service.dart';
 import '../../models/about_us.dart';
 import '../../providers/settings_provider.dart';
 import 'font_size_dialog.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class AboutUsScreen extends StatefulWidget {
   final ApiService? apiService;
@@ -113,11 +114,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.sunriseGold,
-              ),
-            )
+          ? const AboutUsSkeleton()
           : RefreshIndicator(
               color: AppColors.sunriseGold,
               onRefresh: _loadAboutUs,

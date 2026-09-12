@@ -8,6 +8,7 @@ import '../../providers/settings_provider.dart';
 import '../../providers/song_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../settings/font_size_dialog.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class LyricsScreen extends StatefulWidget {
   final Song song;
@@ -193,11 +194,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
             ],
           ),
           body: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.sunriseGold,
-                  ),
-                )
+              ? const LyricsScreenSkeleton()
               : _buildLyricsContent(currentFontSize),
         );
       },

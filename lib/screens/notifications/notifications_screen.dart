@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/notification_item.dart';
 import '../../providers/notification_provider.dart';
+import '../../widgets/skeleton_loaders.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final NotificationProvider notificationProvider;
@@ -69,11 +70,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             color: AppColors.sunriseGold,
             onRefresh: () => widget.notificationProvider.loadNotifications(),
             child: isLoading && items.isEmpty
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.sunriseGold,
-                    ),
-                  )
+                ? const NotificationListSkeleton(count: 5)
                 : items.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
