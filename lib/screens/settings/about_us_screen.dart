@@ -419,7 +419,12 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                             ),
                           ],
 
-                  // 6. Font Size Preference Card (if settingsProvider present)
+                          const SizedBox(height: 20),
+
+                          // 6. Senior Pastor Profile Card (Below Call Prayer Line)
+                          _buildPastorProfileCard(),
+
+                          // 7. Font Size Preference Card (if settingsProvider present)
                   if (widget.settingsProvider != null) ...[
                     const SizedBox(height: 20),
                     ListenableBuilder(
@@ -529,6 +534,91 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                 ],
               ),
             ),
+      ),
+    );
+  }
+
+  Widget _buildPastorProfileCard() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+            child: Container(
+              width: double.infinity,
+              color: Colors.white,
+              padding: const EdgeInsets.only(top: 12),
+              child: Image.asset(
+                'assets/images/pastor_profile.png',
+                fit: BoxFit.contain,
+                height: 320,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.cardSubtle,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(19)),
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.sunriseGold.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Rev. M. Edwin Sathiyanathan',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Rev. எட்வின் சத்தியநாதன் • Senior Pastor',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.hindMadurai(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Bethesda Deliverance Church',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
