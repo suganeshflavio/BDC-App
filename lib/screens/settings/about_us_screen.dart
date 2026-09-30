@@ -243,7 +243,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                                 padding: const EdgeInsets.all(4),
                                 child: ClipOval(
                                   child: Image.asset(
-                                    'assets/images/app_logo.png',
+                                    'assets/images/FHF Logo.png',
                                     fit: BoxFit.contain,
                                   ),
                                 ),

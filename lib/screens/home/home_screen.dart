@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
       listenable: widget.songProvider,
       builder: (context, _) {
         final songs = widget.songProvider.songs;
-        final latestThreeSongs = songs.take(3).toList();
+        final latestThreeSongs = songs.take(5).toList();
         final isLoading = widget.songProvider.isLoading;
 
         return Scaffold(
@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 16),
 
                   // 2. CHURCH DETAILS CARD WITH IMAGE (Dynamic About Us API)
-                  _buildChurchDetailsCard(),
+                  // _buildChurchDetailsCard(),
 
                   const SizedBox(height: 20),
 
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
 
                   if (isLoading && songs.isEmpty)
-                    const SongListSkeleton(count: 3, shrinkWrap: true)
+                    const SongListSkeleton(count: 5, shrinkWrap: true)
                   else if (latestThreeSongs.isEmpty)
                     _buildEmptySongsPlaceholder()
                   else
@@ -239,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
 
                   // View all songs button at the bottom of the list
-                  if (songs.length > 3)
+                  if (songs.length > 5)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -288,162 +288,162 @@ class _HomeScreenState extends State<HomeScreen> {
   // }
 
   /// 2. Church Details Card with Church Image (Loaded from About Us API)
-  Widget _buildChurchDetailsCard() {
-    final churchName = _aboutUs?.churchName.isNotEmpty == true
-        ? _aboutUs!.churchName
-        : 'Bethesda Deliverance Church';
-    final ministryName = _aboutUs?.ministryName.isNotEmpty == true
-        ? _aboutUs!.ministryName
-        : 'The Feet of Heavenly Father Ministries';
-    final description = _aboutUs?.description.isNotEmpty == true
-        ? _aboutUs!.description
-        : 'Join Bethesda Deliverance Church Family in Erode for uplifting sermons, live worship and real-life testimonies that strengthen faith.';
-    final contactNumber = _aboutUs?.contactNumber.isNotEmpty == true
-        ? _aboutUs!.contactNumber
-        : '94436-94891';
+  // Widget _buildChurchDetailsCard() {
+  //   final churchName = _aboutUs?.churchName.isNotEmpty == true
+  //       ? _aboutUs!.churchName
+  //       : 'Bethesda Deliverance Church';
+  //   final ministryName = _aboutUs?.ministryName.isNotEmpty == true
+  //       ? _aboutUs!.ministryName
+  //       : 'The Feet of Heavenly Father Ministries';
+  //   final description = _aboutUs?.description.isNotEmpty == true
+  //       ? _aboutUs!.description
+  //       : 'Join Bethesda Deliverance Church Family in Erode for uplifting sermons, live worship and real-life testimonies that strengthen faith.';
+  //   final contactNumber = _aboutUs?.contactNumber.isNotEmpty == true
+  //       ? _aboutUs!.contactNumber
+  //       : '94436-94891';
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.cardBorder,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Church Image / Banner Header
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF0F172A),
-                    Color(0xFF1E293B),
-                    Color(0xFF14243F),
-                  ],
-                ),
-              ),
-              width: double.infinity,
-              height: 125,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Image.asset(
-                'assets/images/church_logo.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(horizontal: 16),
+  //     decoration: BoxDecoration(
+  //       color: AppColors.cardBackground,
+  //       borderRadius: BorderRadius.circular(20),
+  //       border: Border.all(
+  //         color: AppColors.cardBorder,
+  //         width: 1,
+  //       ),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: AppColors.primaryDark.withValues(alpha: 0.05),
+  //           blurRadius: 10,
+  //           offset: const Offset(0, 4),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Column(
+  //       children: [
+  //         // Church Image / Banner Header
+  //         ClipRRect(
+  //           borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+  //           child: Container(
+  //             decoration: const BoxDecoration(
+  //               gradient: LinearGradient(
+  //                 begin: Alignment.topLeft,
+  //                 end: Alignment.bottomRight,
+  //                 colors: [
+  //                   Color(0xFF0F172A),
+  //                   Color(0xFF1E293B),
+  //                   Color(0xFF14243F),
+  //                 ],
+  //               ),
+  //             ),
+  //             width: double.infinity,
+  //             height: 125,
+  //             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+  //             child: Image.asset(
+  //               'assets/images/church_logo.png',
+  //               fit: BoxFit.contain,
+  //             ),
+  //           ),
+  //         ),
 
-          const Divider(height: 1, color: AppColors.cardBorder),
+  //         const Divider(height: 1, color: AppColors.cardBorder),
 
-          // Church & Ministry Info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        churchName,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.sunriseGold.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.sunriseGold.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Text(
-                        'To Bring Healing',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  ministryName,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: AppColors.textPrimary,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 14),
+  //         // Church & Ministry Info
+  //         Padding(
+  //           padding: const EdgeInsets.all(16),
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Row(
+  //                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //                 children: [
+  //                   Expanded(
+  //                     child: Text(
+  //                       churchName,
+  //                       style: GoogleFonts.poppins(
+  //                         fontSize: 16,
+  //                         fontWeight: FontWeight.w700,
+  //                         color: AppColors.primaryDark,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                   Container(
+  //                     padding: const EdgeInsets.symmetric(
+  //                       horizontal: 8,
+  //                       vertical: 3,
+  //                     ),
+  //                     decoration: BoxDecoration(
+  //                       color: AppColors.sunriseGold.withValues(alpha: 0.15),
+  //                       borderRadius: BorderRadius.circular(12),
+  //                       border: Border.all(
+  //                         color: AppColors.sunriseGold.withValues(alpha: 0.5),
+  //                       ),
+  //                     ),
+  //                     child: Text(
+  //                       'To Bring Healing',
+  //                       style: GoogleFonts.poppins(
+  //                         fontSize: 10,
+  //                         fontWeight: FontWeight.w600,
+  //                         color: AppColors.primary,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //               const SizedBox(height: 4),
+  //               Text(
+  //                 ministryName,
+  //                 style: GoogleFonts.poppins(
+  //                   fontSize: 12,
+  //                   fontWeight: FontWeight.w500,
+  //                   color: AppColors.textSecondary,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 8),
+  //               Text(
+  //                 description,
+  //                 style: GoogleFonts.poppins(
+  //                   fontSize: 13,
+  //                   color: AppColors.textPrimary,
+  //                   height: 1.45,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 14),
 
-                // Quick Call & Helpline Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _callPrayerHelpline(contactNumber),
-                        icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
-                        label: Text(
-                          'Prayer Line: $contactNumber',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryDark,
-                          foregroundColor: AppColors.amberGlow,
-                          elevation: 1,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  //               // Quick Call & Helpline Row
+  //               Row(
+  //                 children: [
+  //                   Expanded(
+  //                     child: ElevatedButton.icon(
+  //                       onPressed: () => _callPrayerHelpline(contactNumber),
+  //                       icon: const Icon(Icons.phone_in_talk_rounded, size: 16),
+  //                       label: Text(
+  //                         'Prayer Line: $contactNumber',
+  //                         style: GoogleFonts.poppins(
+  //                           fontSize: 12,
+  //                           fontWeight: FontWeight.w600,
+  //                         ),
+  //                       ),
+  //                       style: ElevatedButton.styleFrom(
+  //                         backgroundColor: AppColors.primaryDark,
+  //                         foregroundColor: AppColors.amberGlow,
+  //                         elevation: 1,
+  //                         padding: const EdgeInsets.symmetric(vertical: 10),
+  //                         shape: RoundedRectangleBorder(
+  //                           borderRadius: BorderRadius.circular(12),
+  //                         ),
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   /// 3. Horizontal Banner Image Scroll Option (Carousel)
   Widget _buildBannerCarousel() {
@@ -636,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   Text(
-                    'சமீபத்திய பாடல்கள் • 3 பாடல்கள்',
+                    'சமீபத்திய பாடல்கள் • 5 பாடல்கள்',
                     style: GoogleFonts.hindMadurai(
                       fontSize: 11,
                       color: AppColors.textSecondary,
