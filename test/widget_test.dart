@@ -39,7 +39,7 @@ void main() {
     expect(find.textContaining('Skip'), findsOneWidget);
   });
 
-  testWidgets('MainNavigationScreen displays 5 bottom navigation items including Songs and About',
+  testWidgets('MainNavigationScreen displays 5 bottom navigation items including Songs and Prayer',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Songs'), findsWidgets);
     expect(find.text('Favourite'), findsWidgets);
     expect(find.text('Notification'), findsWidgets);
-    expect(find.text('About'), findsWidgets);
+    expect(find.text('Prayer'), findsWidgets);
   });
 
   testWidgets('LyricsScreen has copy lyrics button and displays copy feedback',

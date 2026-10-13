@@ -9,6 +9,7 @@ import '../../providers/song_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../lyrics/lyrics_screen.dart';
+import '../settings/settings_screen.dart';
 import 'all_songs_screen.dart';
 import 'widgets/song_card.dart';
 import '../../widgets/skeleton_loaders.dart';
@@ -171,9 +172,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.search_rounded, color: Colors.white),
-                tooltip: 'Search Songs',
-                onPressed: () => _navigateToAllSongs(autoFocusSearch: true),
+                icon: const Icon(Icons.settings_outlined, color: Colors.white),
+                tooltip: 'Settings & Preferences',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        settingsProvider: widget.settingsProvider,
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 6),
             ],
@@ -485,9 +494,17 @@ class _HomeScreenState extends State<HomeScreen> {
               final banner = _banners[index];
               final gradient = banner['gradient'] as List<Color>;
 
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                padding: const EdgeInsets.all(18),
+              return GestureDetector(
+                onTap: () {
+                  if (index == 3) {
+                    _callPrayerHelpline();
+                  } else {
+                    _navigateToAllSongs();
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: gradient,
@@ -573,8 +590,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            );
+          },
           ),
         ),
 

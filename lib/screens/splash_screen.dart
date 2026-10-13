@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/services/api_service.dart';
 import 'main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,6 +22,12 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // Warm up device authentication early in background
+    ApiService().ensureDeviceAuth().catchError((e) {
+      debugPrint('Splash device auth notice: $e');
+      return null;
+    });
 
     _animController = AnimationController(
       vsync: this,

@@ -14,6 +14,17 @@ class ApiConstants {
   static const String register = '/auth/register';
   static const String login = '/auth/login';
 
+  // Device Auth
+  static const String authDevice = '/auth/device';
+
+  // Feedback
+  static const String feedbackQuestions = '/feedback_questions';
+  static const String feedbackAnswers = '/feedback_answers';
+
+  // Prayer Requests
+  static const String prayerRequests = '/prayer_requests';
+  static String prayerRequestDetail(int id) => '/prayer_requests/$id';
+
   static String songDetail(int id) => '/songs/$id';
   static String toggleFavorite(int id) => '/songs/$id/favorite';
   static String markNotificationRead(int id) => '/notifications/$id/read';

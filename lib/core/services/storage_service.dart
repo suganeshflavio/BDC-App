@@ -56,7 +56,15 @@ class StorageService {
     await _prefs?.setStringList(_keyReadNotifications, ids.map((e) => e.toString()).toList());
   }
 
-  // Auth Token (Optional for user side)
+  // Device ID & User Profile
+  static const String _keyDeviceId = 'stable_device_id';
+  static const String _keyUserId = 'auth_user_id';
+  static const String _keyUserName = 'auth_user_name';
+  static const String _keyUserEmail = 'auth_user_email';
+  static const String _keyUserPhone = 'auth_user_phone';
+  static const String _keyUserRole = 'auth_user_role';
+
+  // Auth Token
   static String? getAuthToken() {
     return _prefs?.getString(_keyAuthToken);
   }
@@ -68,6 +76,47 @@ class StorageService {
   static Future<void> clearAuthToken() async {
     await _prefs?.remove(_keyAuthToken);
   }
+
+  // Stable Client Device ID
+  static String getDeviceId() {
+    var id = _prefs?.getString(_keyDeviceId);
+    if (id == null || id.trim().isEmpty) {
+      id = _generateStableDeviceId();
+      _prefs?.setString(_keyDeviceId, id);
+    }
+    return id;
+  }
+
+  static Future<void> saveDeviceId(String id) async {
+    await _prefs?.setString(_keyDeviceId, id.trim());
+  }
+
+  static String _generateStableDeviceId() {
+    final rand = DateTime.now().millisecondsSinceEpoch.toRadixString(16);
+    final part2 = (100000 + (DateTime.now().microsecond % 900000)).toRadixString(16);
+    return 'bdc-$rand-$part2';
+  }
+
+  // User Profile
+  static String? getUserName() => _prefs?.getString(_keyUserName);
+  static Future<void> saveUserName(String name) async =>
+      await _prefs?.setString(_keyUserName, name);
+
+  static String? getUserPhone() => _prefs?.getString(_keyUserPhone);
+  static Future<void> saveUserPhone(String phone) async =>
+      await _prefs?.setString(_keyUserPhone, phone);
+
+  static String? getUserEmail() => _prefs?.getString(_keyUserEmail);
+  static Future<void> saveUserEmail(String email) async =>
+      await _prefs?.setString(_keyUserEmail, email);
+
+  static int? getUserId() => _prefs?.getInt(_keyUserId);
+  static Future<void> saveUserId(int id) async =>
+      await _prefs?.setInt(_keyUserId, id);
+
+  static String? getUserRole() => _prefs?.getString(_keyUserRole);
+  static Future<void> saveUserRole(String role) async =>
+      await _prefs?.setString(_keyUserRole, role);
 
   // Custom Base URL / Environment Override
   static const String _keyCustomBaseUrl = 'custom_base_url';

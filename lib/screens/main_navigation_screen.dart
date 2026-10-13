@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/services/api_service.dart';
 import '../providers/song_provider.dart';
 import '../providers/favorite_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/prayer_request_provider.dart';
 import 'home/home_screen.dart';
 import 'home/all_songs_screen.dart';
 import 'favorites/favorites_screen.dart';
 import 'notifications/notifications_screen.dart';
-import 'settings/about_us_screen.dart';
+import 'prayer_request/prayer_requests_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -20,26 +22,36 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
+  late final ApiService _apiService;
   late final SongProvider _songProvider;
   late final FavoriteProvider _favoriteProvider;
   late final NotificationProvider _notificationProvider;
   late final SettingsProvider _settingsProvider;
+  late final PrayerRequestProvider _prayerRequestProvider;
 
   @override
   void initState() {
     super.initState();
+    _apiService = ApiService();
     _songProvider = SongProvider();
     _favoriteProvider = FavoriteProvider();
     _notificationProvider = NotificationProvider();
     _settingsProvider = SettingsProvider();
+    _prayerRequestProvider = PrayerRequestProvider();
 
-    // Initial load deferred to after first build frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _songProvider.loadSongs();
-        _favoriteProvider.loadFavorites();
-        _notificationProvider.loadNotifications();
+    // Authenticate device token on entry first before loading initial state
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      try {
+        await _apiService.ensureDeviceAuth();
+      } catch (e) {
+        debugPrint('Main navigation device auth notice: $e');
       }
+      if (!mounted) return;
+      _songProvider.loadSongs();
+      _favoriteProvider.loadFavorites();
+      _notificationProvider.loadNotifications();
+      _prayerRequestProvider.loadPrayerRequests();
     });
   }
 
@@ -65,9 +77,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       NotificationsScreen(
         notificationProvider: _notificationProvider,
       ),
-      AboutUsScreen(
-        showBackButton: false,
-        settingsProvider: _settingsProvider,
+      PrayerRequestsScreen(
+        provider: _prayerRequestProvider,
       ),
     ];
 
@@ -107,6 +118,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   _favoriteProvider.loadFavorites();
                 } else if (index == 3) {
                   _notificationProvider.loadNotifications();
+                } else if (index == 4) {
+                  _prayerRequestProvider.loadPrayerRequests();
                 }
               },
               items: [
@@ -155,9 +168,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   label: 'Notification',
                 ),
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.info_outline_rounded),
-                  activeIcon: Icon(Icons.info_rounded),
-                  label: 'About',
+                  icon: Icon(Icons.volunteer_activism_outlined),
+                  activeIcon: Icon(Icons.volunteer_activism_rounded),
+                  label: 'Prayer',
                 ),
               ],
             ),

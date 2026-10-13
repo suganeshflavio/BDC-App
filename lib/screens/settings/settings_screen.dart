@@ -4,6 +4,8 @@ import '../../core/constants/app_colors.dart';
 import '../../providers/settings_provider.dart';
 import 'font_size_dialog.dart';
 import 'about_us_screen.dart';
+import '../feedback/feedback_screen.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/config/app_environment.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -165,11 +167,13 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // 1. User / Admin Access
+                      // 1. User / Device Access Mode
                       _buildSettingsTile(
                         icon: Icons.person_outline_rounded,
-                        title: 'User Access Mode',
-                        subtitle: 'Guest offline mode enabled',
+                        title: 'Member & Device Account',
+                        subtitle: StorageService.getUserName()?.isNotEmpty == true
+                            ? 'Member: ${StorageService.getUserName()}'
+                            : 'Device: ${StorageService.getDeviceId()}',
                         trailing: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -180,7 +184,7 @@ class SettingsScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'Guest Mode',
+                            StorageService.getAuthToken() != null ? 'Connected' : 'Device Mode',
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               color: AppColors.primaryDark,
@@ -239,42 +243,24 @@ class SettingsScreen extends StatelessWidget {
 
                       const Divider(color: AppColors.cardBorder, height: 1),
 
-                      // 3. Server Environment
-                      // _buildSettingsTile(
-                      //   icon: Icons.dns_outlined,
-                      //   title: 'API Server Endpoint',
-                      //   subtitle: 'Configure backend server URL',
-                      //   trailing: Row(
-                      //     mainAxisSize: MainAxisSize.min,
-                      //     children: [
-                      //       Container(
-                      //         constraints: const BoxConstraints(maxWidth: 120),
-                      //         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      //         decoration: BoxDecoration(
-                      //           color: AppColors.primaryLight.withValues(alpha: 0.1),
-                      //           borderRadius: BorderRadius.circular(8),
-                      //         ),
-                      //         child: Text(
-                      //           AppEnvironment.baseUrl,
-                      //           style: GoogleFonts.poppins(
-                      //             fontSize: 10,
-                      //             color: AppColors.primaryDark,
-                      //             fontWeight: FontWeight.w500,
-                      //           ),
-                      //           maxLines: 1,
-                      //           overflow: TextOverflow.ellipsis,
-                      //         ),
-                      //       ),
-                      //       const SizedBox(width: 4),
-                      //       const Icon(
-                      //         Icons.chevron_right_rounded,
-                      //         color: AppColors.textSecondary,
-                      //         size: 18,
-                      //       ),
-                      //     ],
-                      //   ),
-                      //   onTap: () => _showEnvironmentDialog(context),
-                      // ),
+                      // 3. Feedback Module
+                      _buildSettingsTile(
+                        icon: Icons.rate_review_outlined,
+                        title: 'கருத்துக்கள் (Feedback)',
+                        subtitle: 'Convention, worship feedback & suggestions',
+                        trailing: const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textSecondary,
+                          size: 20,
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FeedbackScreen(),
+                            ),
+                          );
+                        },
+                      ),
 
                       const Divider(color: AppColors.cardBorder, height: 1),
 
@@ -392,6 +378,10 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showUserAccessSheet(BuildContext context) {
+    final deviceId = StorageService.getDeviceId();
+    final userName = StorageService.getUserName() ?? 'Member';
+    final token = StorageService.getAuthToken();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -402,30 +392,81 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             const SizedBox(height: 18),
             Text(
-              'User Access',
+              'Member & Device Profile',
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primaryDark,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.scaffoldBackground,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Member Name:', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(userName, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const Divider(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Device ID:', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                      Flexible(
+                        child: Text(
+                          deviceId,
+                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Auth Status:', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary)),
+                      Text(
+                        token != null ? 'Authenticated (Active)' : 'Device Ready',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: token != null ? const Color(0xFF2E6B4F) : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
-              'You are browsing in free Guest Mode. All song lyrics, search, and personal favorites are preserved offline on your device.',
-              textAlign: TextAlign.center,
+              'Your device ID automatically secures prayer requests, personal feedback, and offline song lyrics.',
               style: GoogleFonts.poppins(
-                fontSize: 13,
+                fontSize: 12,
                 color: AppColors.textSecondary,
                 height: 1.4,
               ),
@@ -443,7 +484,7 @@ class SettingsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('Continue as Guest'),
+                child: const Text('Close'),
               ),
             ),
           ],

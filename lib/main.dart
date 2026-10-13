@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'core/services/api_service.dart';
 import 'core/services/storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'screens/splash_screen.dart';
@@ -17,6 +18,12 @@ Future<void> main() async {
 
   // Initialize offline persistent preferences
   await StorageService.init();
+
+  // Call /auth/device 1st to ensure token is obtained before other operations
+  ApiService().ensureDeviceAuth().catchError((e) {
+    debugPrint('App init device auth notice: $e');
+    return null;
+  });
 
   // System UI Overlay styling
   SystemChrome.setSystemUIOverlayStyle(
