@@ -320,7 +320,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        'பரமனின் கீதங்கள்',
+                                        'BDC Family',
                                         style: GoogleFonts.hindMadurai(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,

@@ -1,18 +1,36 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../models/about_us.dart';
+import '../../models/announcement.dart';
 import '../../providers/song_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../lyrics/lyrics_screen.dart';
 import '../settings/settings_screen.dart';
+import '../settings/about_us_screen.dart';
 import 'all_songs_screen.dart';
 import 'widgets/song_card.dart';
 import '../../widgets/skeleton_loaders.dart';
+
+class AnnouncementBannerSlide {
+  final Announcement announcement;
+  final String? imageUrl;
+  final int imageIndex;
+  final int totalImagesForAnnouncement;
+
+  AnnouncementBannerSlide({
+    required this.announcement,
+    this.imageUrl,
+    this.imageIndex = 0,
+    this.totalImagesForAnnouncement = 1,
+  });
+}
 
 class HomeScreen extends StatefulWidget {
   final SongProvider songProvider;
@@ -34,47 +52,19 @@ class _HomeScreenState extends State<HomeScreen> {
   late final PageController _bannerController;
   late final ApiService _apiService;
   AboutUs? _aboutUs;
+  List<Announcement> _announcements = [];
+  List<AnnouncementBannerSlide> _bannerSlides = [];
+  bool _isLoadingAnnouncements = true;
   int _currentBannerIndex = 0;
   Timer? _bannerTimer;
-
-  List<Map<String, dynamic>> get _banners => [
-    {
-      'badge': 'SONG BOOK',
-      'title': 'பரமனின் கீதங்கள்',
-      'subtitle': 'Explore 120+ Christian Hymns, Chorus & Verses',
-      'gradient': [const Color(0xFF1E1B38), const Color(0xFF384370), const Color(0xFFC15063)],
-      'icon': Icons.music_note_rounded,
-    },
-    {
-      'badge': 'SUNDAY SERVICE',
-      'title': 'ஞாயிறு ஆராதனை',
-      'subtitle': 'Join live worship & prophetic sermons every Sunday',
-      'gradient': [const Color(0xFF0F2B48), const Color(0xFF1E5B7E), const Color(0xFFF6B071)],
-      'icon': Icons.church_rounded,
-    },
-    {
-      'badge': 'FASTING PRAYER',
-      'title': 'வெள்ளி உபவாச ஜெபம்',
-      'subtitle': 'Special fasting & deliverance healing prayer service',
-      'gradient': [const Color(0xFF2E1C38), const Color(0xFF6F3B68), const Color(0xFFEAA15A)],
-      'icon': Icons.volunteer_activism_rounded,
-    },
-    {
-      'badge': '24/7 PRAYER LINE',
-      'title': 'ஜெப உதவி மையம்',
-      'subtitle': 'Contact Pastor & Prayer Warriors: ${_aboutUs?.contactNumber.isNotEmpty == true ? _aboutUs!.contactNumber : '94436-94891'}',
-      'gradient': [const Color(0xFF1B3B2B), const Color(0xFF2E6B4F), const Color(0xFFFDD993)],
-      'icon': Icons.phone_in_talk_rounded,
-    },
-  ];
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService();
     _bannerController = PageController();
-    _startBannerAutoScroll();
     _loadAboutUs();
+    _loadAnnouncements();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.songProvider.songs.isEmpty) {
         widget.songProvider.loadSongs();
@@ -91,16 +81,71 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadAnnouncements({bool forceRefresh = false}) async {
+    try {
+      final list = await _apiService.fetchAnnouncements();
+      if (!mounted) return;
+
+      final List<AnnouncementBannerSlide> slides = [];
+      for (final a in list) {
+        if (a.bannerImages.isNotEmpty) {
+          for (int i = 0; i < a.bannerImages.length; i++) {
+            slides.add(AnnouncementBannerSlide(
+              announcement: a,
+              imageUrl: a.bannerImages[i],
+              imageIndex: i,
+              totalImagesForAnnouncement: a.bannerImages.length,
+            ));
+          }
+        } else {
+          slides.add(AnnouncementBannerSlide(
+            announcement: a,
+            imageUrl: null,
+          ));
+        }
+      }
+
+      setState(() {
+        _announcements = list;
+        _bannerSlides = slides;
+        _isLoadingAnnouncements = false;
+        if (_currentBannerIndex >= slides.length) {
+          _currentBannerIndex = 0;
+        }
+      });
+      _startBannerAutoScroll();
+    } catch (e) {
+      debugPrint('HomeScreen._loadAnnouncements error: $e');
+      if (mounted) {
+        setState(() => _isLoadingAnnouncements = false);
+      }
+    }
+  }
+
   void _startBannerAutoScroll() {
+    _bannerTimer?.cancel();
+    if (_bannerSlides.length <= 1) return;
     _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (!mounted || !_bannerController.hasClients) return;
-      int nextPage = (_currentBannerIndex + 1) % _banners.length;
+      if (!mounted || !_bannerController.hasClients || _bannerSlides.isEmpty) return;
+      int nextPage = (_currentBannerIndex + 1) % _bannerSlides.length;
       _bannerController.animateToPage(
         nextPage,
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOutCubic,
       );
     });
+  }
+
+  String _resolveImageUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    final uri = Uri.tryParse(_apiService.baseUrl);
+    if (uri != null && uri.hasScheme && uri.hasAuthority) {
+      final origin = '${uri.scheme}://${uri.authority}';
+      return origin + (url.startsWith('/') ? url : '/$url');
+    }
+    return url;
   }
 
   @override
@@ -152,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'பரமனின் கீதங்கள்',
+                  'BDC Family',
                   style: GoogleFonts.hindMadurai(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -161,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Text(
-                  'Paramanin Keethangal • பாடல் செயலி',
+                  'A Covenant of Prayer',
                   style: GoogleFonts.hindMadurai(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
@@ -192,6 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onRefresh: () => Future.wait([
               widget.songProvider.loadSongs(forceRefresh: true),
               _loadAboutUs(forceRefresh: true),
+              _loadAnnouncements(forceRefresh: true),
             ]),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(
@@ -200,15 +246,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. WELCOME & GREETING CARD (Disabled)
-                  // _buildWelcomeHeader(),
+                  // 1. SIMPLE WELCOME TEXT HEADER
+                  _buildWelcomeText(),
 
-                  const SizedBox(height: 16),
-
-                  // 2. CHURCH DETAILS CARD WITH IMAGE (Dynamic About Us API)
-                  // _buildChurchDetailsCard(),
-
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   // 3. HORIZONTAL BANNER IMAGE SCROLL CAROUSEL
                   _buildBannerCarousel(),
@@ -454,8 +495,49 @@ class _HomeScreenState extends State<HomeScreen> {
   //   );
   // }
 
-  /// 3. Horizontal Banner Image Scroll Option (Carousel)
+  /// 1. Simple Welcome Text Header
+  Widget _buildWelcomeText() {
+    final userName = StorageService.getUserName();
+    final hasName = userName != null && userName.trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            hasName ? 'Welcome, ${userName.trim()}' : 'Welcome to BDC Family',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'A Covenant of Prayer • கர்த்தருக்குள் அன்பின் வாழ்த்துகள்',
+            style: GoogleFonts.hindMadurai(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 3. Horizontal Banner Image Scroll Option (Dynamic Announcements Carousel)
   Widget _buildBannerCarousel() {
+    if (_isLoadingAnnouncements) {
+      return _buildBannerSkeleton();
+    }
+
+    if (_bannerSlides.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -463,160 +545,465 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Row(
             children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                size: 16,
-                color: AppColors.sunriseAmber,
+              // const Icon(
+              //   Icons.campaign_rounded,
+              //   size: 18,
+              //   color: AppColors.sunriseAmber,
+              // ),
+              // const SizedBox(width: 6),
+              // Text(
+              //   'Featured & Announcements',
+              //   style: GoogleFonts.poppins(
+              //     fontSize: 13,
+              //     fontWeight: FontWeight.w600,
+              //     color: AppColors.textSecondary,
+              //     letterSpacing: 0.5,
+              //   ),
+              // ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final bannerHeight = constraints.maxWidth * 9 / 16;
+            return SizedBox(
+              height: bannerHeight,
+              child: PageView.builder(
+                controller: _bannerController,
+                onPageChanged: (index) {
+                  setState(() => _currentBannerIndex = index);
+                },
+                itemCount: _bannerSlides.length,
+                itemBuilder: (context, index) {
+              final slide = _bannerSlides[index];
+
+              return GestureDetector(
+                onTap: () => _showAnnouncementDetail(slide.announcement, slide.imageUrl),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.cardBorder),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primaryDark.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Background image or fallback card
+                        _buildBannerImage(slide.imageUrl, slide.announcement),
+
+                        // Bottom gradient scrim for text readability
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [
+                                  Colors.black.withValues(alpha: 0.85),
+                                  Colors.black.withValues(alpha: 0.45),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (slide.announcement.subject.isNotEmpty)
+                                  // Text(
+                                  //   slide.announcement.subject,
+                                  //   style: GoogleFonts.hindMadurai(
+                                  //     fontSize: 16,
+                                  //     fontWeight: FontWeight.w700,
+                                  //     color: Colors.white,
+                                  //     shadows: const [
+                                  //       Shadow(
+                                  //         blurRadius: 4,
+                                  //         color: Colors.black87,
+                                  //         offset: Offset(0, 1),
+                                  //       ),
+                                  //     ],
+                                  //   ),
+                                  //   maxLines: 1,
+                                  //   overflow: TextOverflow.ellipsis,
+                                  // ),
+                                if (slide.announcement.description.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  // Text(
+                                  //   slide.announcement.description,
+                                  //   style: GoogleFonts.poppins(
+                                  //     fontSize: 11,
+                                  //     color: Colors.white.withValues(alpha: 0.9),
+                                  //     shadows: const [
+                                  //       Shadow(
+                                  //         blurRadius: 4,
+                                  //         color: Colors.black87,
+                                  //         offset: Offset(0, 1),
+                                  //       ),
+                                  //     ],
+                                  //   ),
+                                  //   maxLines: 1,
+                                  //   overflow: TextOverflow.ellipsis,
+                                  // ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Announcement badge in top left
+                        // Positioned(
+                        //   top: 10,
+                        //   left: 12,
+                        //   child: Container(
+                        //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        //     decoration: BoxDecoration(
+                        //       color: AppColors.primaryDark.withValues(alpha: 0.85),
+                        //       borderRadius: BorderRadius.circular(8),
+                        //       border: Border.all(
+                        //         color: AppColors.sunriseGold.withValues(alpha: 0.5),
+                        //         width: 1,
+                        //       ),
+                        //     ),
+                        //     child: Row(
+                        //       mainAxisSize: MainAxisSize.min,
+                        //       children: [
+                        //         const Icon(
+                        //           Icons.campaign_rounded,
+                        //           size: 13,
+                        //           color: AppColors.sunriseGold,
+                        //         ),
+                        //         const SizedBox(width: 4),
+                        //         Text(
+                        //           'ANNOUNCEMENT',
+                        //           style: GoogleFonts.poppins(
+                        //             fontSize: 9,
+                        //             fontWeight: FontWeight.w700,
+                        //             color: AppColors.sunriseGold,
+                        //             letterSpacing: 0.5,
+                        //           ),
+                        //         ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
+
+                        // Multi-image index indicator in top right (if more than 1 image for announcement)
+                        if (slide.totalImagesForAnnouncement > 1)
+                          Positioned(
+                            top: 10,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${slide.imageIndex + 1}/${slide.totalImagesForAnnouncement}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ),
+
+        // Dot indicators for banner carousel
+        if (_bannerSlides.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_bannerSlides.length, (index) {
+              final isSelected = _currentBannerIndex == index;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isSelected ? 20 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.sunriseGold
+                      : AppColors.primaryLight.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBannerImage(String? imageUrl, Announcement announcement) {
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      return _buildFallbackBannerCard(announcement);
+    }
+
+    final trimmed = imageUrl.trim();
+
+    // Support Base64 Data URIs (e.g. data:image/jpeg;base64,...)
+    if (trimmed.startsWith('data:image/') && trimmed.contains('base64,')) {
+      try {
+        final base64String = trimmed.split('base64,').last.trim();
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildFallbackBannerCard(announcement);
+          },
+        );
+      } catch (e) {
+        debugPrint('Base64 banner image decode error: $e');
+        return _buildFallbackBannerCard(announcement);
+      }
+    }
+
+    return Image.network(
+      _resolveImageUrl(trimmed),
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          color: AppColors.primaryDark.withValues(alpha: 0.1),
+          child: const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.sunriseGold,
+            ),
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('Network banner image load error: $error');
+        return _buildFallbackBannerCard(announcement);
+      },
+    );
+  }
+
+  Widget _buildDetailImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final trimmed = imageUrl.trim();
+    if (trimmed.startsWith('data:image/') && trimmed.contains('base64,')) {
+      try {
+        final base64String = trimmed.split('base64,').last.trim();
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        );
+      } catch (_) {
+        return const SizedBox.shrink();
+      }
+    }
+    return Image.network(
+      _resolveImageUrl(trimmed),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildFallbackBannerCard(Announcement announcement) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E1B38), Color(0xFF384370), Color(0xFF5A4A78)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Text(
+                //   announcement.subject.isNotEmpty ? announcement.subject : 'Bethesda Announcement',
+                //   style: GoogleFonts.hindMadurai(
+                //     fontSize: 17,
+                //     fontWeight: FontWeight.bold,
+                //     color: Colors.white,
+                //   ),
+                //   maxLines: 2,
+                //   overflow: TextOverflow.ellipsis,
+                // ),
+                if (announcement.description.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  // Text(
+                  //   announcement.description,
+                  //   style: GoogleFonts.poppins(
+                  //     fontSize: 12,
+                  //     color: Colors.white.withValues(alpha: 0.85),
+                  //   ),
+                  //   maxLines: 2,
+                  //   overflow: TextOverflow.ellipsis,
+                  // ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
               ),
-              const SizedBox(width: 6),
-              Text(
-                'Featured & Announcements',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.5,
+            ),
+            child: const Icon(
+              Icons.campaign_rounded,
+              color: AppColors.sunriseGold,
+              size: 26,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBannerSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.sunriseGold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAnnouncementDetail(Announcement announcement, String? imageUrl) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (imageUrl != null && imageUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: _buildDetailImage(imageUrl),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Text(
+              //   announcement.subject,
+              //   style: GoogleFonts.hindMadurai(
+              //     fontSize: 20,
+              //     fontWeight: FontWeight.w700,
+              //     color: AppColors.primaryDark,
+              //   ),
+              // ),
+              if (announcement.createdAt != null) ...[
+                const SizedBox(height: 4),
+                // Text(
+                //   '${announcement.createdAt!.day}/${announcement.createdAt!.month}/${announcement.createdAt!.year}',
+                //   style: GoogleFonts.poppins(
+                //     fontSize: 12,
+                //     color: AppColors.textMuted,
+                //   ),
+                // ),
+              ],
+              if (announcement.description.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                // Text(
+                //   announcement.description,
+                //   style: GoogleFonts.hindMadurai(
+                //     fontSize: 15,
+                //     height: 1.5,
+                //     color: AppColors.textPrimary,
+                //   ),
+                // ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryDark,
+                    foregroundColor: AppColors.sunriseGold,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Close'),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 155,
-          child: PageView.builder(
-            controller: _bannerController,
-            onPageChanged: (index) {
-              setState(() => _currentBannerIndex = index);
-            },
-            itemCount: _banners.length,
-            itemBuilder: (context, index) {
-              final banner = _banners[index];
-              final gradient = banner['gradient'] as List<Color>;
-
-              return GestureDetector(
-                onTap: () {
-                  if (index == 3) {
-                    _callPrayerHelpline();
-                  } else {
-                    _navigateToAllSongs();
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: gradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradient.first.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              banner['badge'] as String,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            banner['title'] as String,
-                            style: GoogleFonts.hindMadurai(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.2,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            banner['subtitle'] as String,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.85),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Icon(
-                        banner['icon'] as IconData,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-          ),
-        ),
-
-        // Dot indicators for banner carousel
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (index) {
-            final isSelected = _currentBannerIndex == index;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: isSelected ? 20 : 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.sunriseGold
-                    : AppColors.primaryLight.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(3),
-              ),
-            );
-          }),
-        ),
-      ],
+      ),
     );
   }
 

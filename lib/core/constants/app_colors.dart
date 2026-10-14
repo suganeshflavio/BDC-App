@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// App color palette derived directly from the "பரமனின் கீதங்கள்" splash cover:
+/// App color palette derived directly from the "BDC Family" splash cover:
 /// - Deep Celestial Indigo (#201E38, #37466E)
 /// - Radiant Sunrise Gold (#F6B071, #FDD993)
 /// - Sacred Rose / Mauve (#C15063)

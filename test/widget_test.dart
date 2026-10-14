@@ -8,6 +8,12 @@ import 'package:chruch_coir/screens/lyrics/lyrics_screen.dart';
 import 'package:chruch_coir/screens/settings/about_us_screen.dart';
 import 'package:chruch_coir/models/song.dart';
 import 'package:chruch_coir/models/song_verse.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:chruch_coir/core/services/api_service.dart';
+import 'package:chruch_coir/screens/feedback/feedback_screen.dart';
+import 'package:chruch_coir/providers/feedback_provider.dart';
 import 'package:chruch_coir/providers/settings_provider.dart';
 import 'package:chruch_coir/providers/song_provider.dart';
 import 'package:chruch_coir/providers/favorite_provider.dart';
@@ -114,5 +120,62 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('About Us'), findsOneWidget);
+  });
+
+  testWidgets('FeedbackScreen validates mandatory name field and prevents submit without name',
+      (WidgetTester tester) async {
+    int submitCount = 0;
+    final mockClient = MockClient((request) async {
+      if (request.url.path.endsWith('/feedback_questions')) {
+        return http.Response(
+          jsonEncode({
+            'feedback_questions': [
+              {
+                'id': 101,
+                'question_text': 'How was the service?',
+                'active': true,
+                'answered': false,
+              }
+            ]
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path.endsWith('/feedback_answers')) {
+        submitCount++;
+        return http.Response('{"message":"ok"}', 201, headers: {'content-type': 'application/json'});
+      }
+      return http.Response('{"error":"not found"}', 404);
+    });
+
+    final apiService = ApiService(baseUrl: 'https://test.api/v1', client: mockClient);
+    final feedbackProvider = FeedbackProvider(apiService: apiService);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FeedbackScreen(provider: feedbackProvider),
+      ),
+    );
+
+    // Allow questions to load
+    await tester.pumpAndSettle();
+
+    // Verify name field is present with required label
+    expect(find.textContaining('உங்கள் பெயர் (Your Name) *'), findsOneWidget);
+    expect(find.textContaining('Name is required to submit'), findsOneWidget);
+
+    // Tap submit button without entering name (ensure visible in scroll view)
+    final submitButton = find.byType(ElevatedButton);
+    expect(submitButton, findsOneWidget);
+    await tester.ensureVisible(submitButton);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    // Verify submit API was NOT called
+    expect(submitCount, 0);
+
+    // Verify inline validation error is shown
+    expect(find.textContaining('Please enter your name'), findsWidgets);
   });
 }

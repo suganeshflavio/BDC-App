@@ -25,6 +25,10 @@ class ApiConstants {
   static const String prayerRequests = '/prayer_requests';
   static String prayerRequestDetail(int id) => '/prayer_requests/$id';
 
+  // Announcements
+  static const String announcements = '/announcements';
+  static const String adminAnnouncements = '/admin/announcements';
+
   static String songDetail(int id) => '/songs/$id';
   static String toggleFavorite(int id) => '/songs/$id/favorite';
   static String markNotificationRead(int id) => '/notifications/$id/read';

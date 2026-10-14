@@ -102,7 +102,7 @@ class SettingsScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'பரமனின் கீதங்கள்',
+                              'BDC Family',
                               style: GoogleFonts.hindMadurai(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
@@ -168,32 +168,32 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       // 1. User / Device Access Mode
-                      _buildSettingsTile(
-                        icon: Icons.person_outline_rounded,
-                        title: 'Member & Device Account',
-                        subtitle: StorageService.getUserName()?.isNotEmpty == true
-                            ? 'Member: ${StorageService.getUserName()}'
-                            : 'Device: ${StorageService.getDeviceId()}',
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            StorageService.getAuthToken() != null ? 'Connected' : 'Device Mode',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        onTap: () => _showUserAccessSheet(context),
-                      ),
+                      // _buildSettingsTile(
+                      //   icon: Icons.person_outline_rounded,
+                      //   title: 'Member & Device Account',
+                      //   subtitle: StorageService.getUserName()?.isNotEmpty == true
+                      //       ? 'Member: ${StorageService.getUserName()}'
+                      //       : 'Device: ${StorageService.getDeviceId()}',
+                      //   trailing: Container(
+                      //     padding: const EdgeInsets.symmetric(
+                      //       horizontal: 10,
+                      //       vertical: 4,
+                      //     ),
+                      //     decoration: BoxDecoration(
+                      //       color: AppColors.primaryLight.withValues(alpha: 0.1),
+                      //       borderRadius: BorderRadius.circular(12),
+                      //     ),
+                      //     child: Text(
+                      //       StorageService.getAuthToken() != null ? 'Connected' : 'Device Mode',
+                      //       style: GoogleFonts.poppins(
+                      //         fontSize: 11,
+                      //         color: AppColors.primaryDark,
+                      //         fontWeight: FontWeight.w600,
+                      //       ),
+                      //     ),
+                      //   ),
+                      //   onTap: () => _showUserAccessSheet(context),
+                      // ),
 
                       const Divider(color: AppColors.cardBorder, height: 1),
 
@@ -293,7 +293,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'பரமனின் கீதங்கள் • Version 1.0.0',
+                        'BDC Family • Version 1.0.0',
                         style: GoogleFonts.hindMadurai(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,

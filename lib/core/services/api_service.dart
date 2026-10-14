@@ -8,6 +8,7 @@ import '../../models/about_us.dart';
 import '../../models/device_auth.dart';
 import '../../models/feedback_question.dart';
 import '../../models/prayer_request.dart';
+import '../../models/announcement.dart';
 import 'api_exception.dart';
 import 'storage_service.dart';
 
@@ -483,8 +484,11 @@ class ApiService {
 
         await StorageService.saveAuthToken(authRes.token);
         await StorageService.saveUserId(authRes.user.id);
-        if (authRes.user.name.isNotEmpty) {
-          await StorageService.saveUserName(authRes.user.name);
+        final uName = authRes.user.name.trim();
+        if (uName.isNotEmpty &&
+            uName.toLowerCase() != 'guest' &&
+            uName.toLowerCase() != 'guest user') {
+          await StorageService.saveUserName(uName);
         }
         if (authRes.user.email.isNotEmpty) {
           await StorageService.saveUserEmail(authRes.user.email);
@@ -557,7 +561,18 @@ class ApiService {
   /// Submits member responses to one or more feedback questions.
   /// Sends `Authorization: Bearer <token>` in header.
   /// Throws [ApiException] on validation (422) or server error.
-  Future<bool> submitFeedbackAnswers(List<Map<String, dynamic>> answers) async {
+  Future<bool> submitFeedbackAnswers(
+    List<Map<String, dynamic>> answers, {
+    required String name,
+  }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      throw const ApiException(
+        'Name is required to submit feedback. (பெயர் உள்ளிடுவது அவசியம்)',
+        statusCode: 422,
+      );
+    }
+
     if (answers.isEmpty) {
       throw const ApiException('Please provide an answer before submitting.', statusCode: 422);
     }
@@ -570,7 +585,10 @@ class ApiService {
     }
 
     final uri = Uri.parse('$baseUrl${ApiConstants.feedbackAnswers}');
-    final body = jsonEncode({'answers': answers});
+    final body = jsonEncode({
+      'name': trimmedName,
+      'answers': answers,
+    });
 
     try {
       var headers = await _buildHeaders();
@@ -656,11 +674,15 @@ class ApiService {
     required String name,
     required String mobile,
     required String description,
+    required String location,
     String? voiceNoteUrl,
   }) async {
-    if (name.trim().isEmpty || mobile.trim().isEmpty || description.trim().isEmpty) {
+    if (name.trim().isEmpty ||
+        mobile.trim().isEmpty ||
+        description.trim().isEmpty ||
+        location.trim().isEmpty) {
       throw const ApiException(
-        'Name, mobile number, and prayer need are required fields.',
+        'Name, mobile number, location, and prayer need are required fields.',
         statusCode: 422,
       );
     }
@@ -670,18 +692,31 @@ class ApiService {
       'prayer_request': {
         'name': name.trim(),
         'mobile': mobile.trim(),
+        'location': location.trim(),
         'description': description.trim(),
         if (voiceNoteUrl != null && voiceNoteUrl.trim().isNotEmpty)
           'voice_note_url': voiceNoteUrl.trim(),
       },
     };
+    final payloadJson = jsonEncode(payload);
 
     try {
       var headers = await _buildHeaders(name: name.trim());
+      print('====================================================');
+      print('>>> [PrayerRequest POST URL]: $uri');
+      print('>>> [PrayerRequest POST Headers]: $headers');
+      print('>>> [PrayerRequest POST Payload]: $payloadJson');
+      print('====================================================');
+      debugPrint('====================================================');
+      debugPrint('>>> [PrayerRequest POST URL]: $uri');
+      debugPrint('>>> [PrayerRequest POST Headers]: $headers');
+      debugPrint('>>> [PrayerRequest POST Payload]: $payloadJson');
+      debugPrint('====================================================');
+
       var response = await _client.post(
         uri,
         headers: headers,
-        body: jsonEncode(payload),
+        body: payloadJson,
       ).timeout(_timeout);
 
       if (response.statusCode == 401) {
@@ -690,27 +725,103 @@ class ApiService {
         response = await _client.post(
           uri,
           headers: headers,
-          body: jsonEncode(payload),
+          body: payloadJson,
         ).timeout(_timeout);
       }
+
+      print('====================================================');
+      print('<<< [PrayerRequest Response Status]: ${response.statusCode}');
+      print('<<< [PrayerRequest Response Body]: ${response.body}');
+      print('====================================================');
+      debugPrint('====================================================');
+      debugPrint('<<< [PrayerRequest Response Status]: ${response.statusCode}');
+      debugPrint('<<< [PrayerRequest Response Body]: ${response.body}');
+      debugPrint('====================================================');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         await StorageService.saveUserName(name.trim());
         await StorageService.saveUserPhone(mobile.trim());
+        if (location != null && location.trim().isNotEmpty) {
+          await StorageService.saveUserLocation(location.trim());
+        }
         return PrayerRequest.fromJson(data);
       } else {
         throw ApiException.fromResponse(response.statusCode, response.body);
       }
-    } on ApiException {
+    } on ApiException catch (e) {
+      print('!!! [PrayerRequest ApiException]: ${e.message} (status: ${e.statusCode})');
       rethrow;
     } catch (e) {
-      debugPrint('ApiService.createPrayerRequest error: $e');
+      print('====================================================');
+      print('!!! [PrayerRequest POST Error]: $e');
+      print('====================================================');
+      debugPrint('====================================================');
+      debugPrint('!!! [PrayerRequest POST Error]: $e');
+      debugPrint('====================================================');
       throw ApiException(
         'Unable to submit prayer request. Please check connection.',
         details: e,
       );
     }
+  }
+
+  // ==========================================
+  // ANNOUNCEMENTS / BANNERS API
+  // ==========================================
+
+  /// GET /admin/announcements
+  /// Retrieves dynamic announcements and banners.
+  /// Sends `Authorization: Bearer <token>` in header.
+  /// If /admin/announcements returns 403 (e.g. non-admin device token) or 404,
+  /// seamlessly falls back to /announcements.
+  Future<List<Announcement>> fetchAnnouncements({int page = 1}) async {
+    final adminUri = page > 1
+        ? Uri.parse('$baseUrl${ApiConstants.adminAnnouncements}?page=$page')
+        : Uri.parse('$baseUrl${ApiConstants.adminAnnouncements}');
+
+    try {
+      var headers = await _buildHeaders();
+      debugPrint('>>> [Announcements GET URL]: $adminUri');
+      var response = await _client.get(adminUri, headers: headers).timeout(_timeout);
+
+      if (response.statusCode == 401) {
+        await ensureDeviceAuth(forceRefresh: true);
+        headers = await _buildHeaders();
+        response = await _client.get(adminUri, headers: headers).timeout(_timeout);
+      }
+
+      debugPrint('<<< [Announcements Status]: ${response.statusCode}');
+      debugPrint('<<< [Announcements Body]: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final parsed = AnnouncementsResponse.fromJson(data);
+        return parsed.announcements;
+      }
+
+      // If /admin/announcements is Forbidden (403), Unauthorized (401), or Not Found (404),
+      // fallback to the congregation endpoint /announcements
+      if (response.statusCode == 403 || response.statusCode == 401 || response.statusCode == 404) {
+        final fallbackUri = page > 1
+            ? Uri.parse('$baseUrl${ApiConstants.announcements}?page=$page')
+            : Uri.parse('$baseUrl${ApiConstants.announcements}');
+        debugPrint('>>> [Announcements Fallback GET URL]: $fallbackUri');
+        final fallbackRes = await _client.get(fallbackUri, headers: headers).timeout(_timeout);
+        debugPrint('<<< [Announcements Fallback Status]: ${fallbackRes.statusCode}');
+        debugPrint('<<< [Announcements Fallback Body]: ${fallbackRes.body}');
+
+        if (fallbackRes.statusCode == 200) {
+          final data = jsonDecode(fallbackRes.body) as Map<String, dynamic>;
+          final parsed = AnnouncementsResponse.fromJson(data);
+          return parsed.announcements;
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService.fetchAnnouncements error: $e');
+    }
+
+    return [];
   }
 
   /// DELETE /prayer_requests/:id

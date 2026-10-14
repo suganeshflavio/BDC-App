@@ -89,16 +89,37 @@ class _SplashScreenState extends State<SplashScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Full-screen Splash Cover Image Only (Edge to Edge)
-          ScaleTransition(
-            scale: _scaleAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Image.asset(
-                'assets/images/splash_cover.png',
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
+          // Elegant dark background matching church brand colors
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF070B14),
+                  Color(0xFF0F172A),
+                  Color(0xFF1E293B),
+                  Color(0xFF0F172A),
+                  Color(0xFF070B14),
+                ],
+              ),
+            ),
+          ),
+
+          // Centered Church Logo with fade and scale animation
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Image.asset(
+                    'assets/images/church_logo.png',
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                  ),
+                ),
               ),
             ),
           ),

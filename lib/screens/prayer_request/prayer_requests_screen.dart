@@ -45,6 +45,9 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
     final mobileController = TextEditingController(
       text: StorageService.getUserPhone() ?? '',
     );
+    final locationController = TextEditingController(
+      text: StorageService.getUserLocation() ?? '',
+    );
     final descController = TextEditingController();
     final voiceNoteController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -55,6 +58,7 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         bool isSubmittingLocal = false;
+        AutovalidateMode autovalidateMode = AutovalidateMode.disabled;
 
         return StatefulBuilder(
           builder: (modalContext, setModalState) {
@@ -72,6 +76,7 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
               child: SingleChildScrollView(
                 child: Form(
                   key: formKey,
+                  autovalidateMode: autovalidateMode,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +115,7 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'புதிய ஜெப விண்ணப்பம்',
+                                  'புதிய ஜெப விண்ணப்பம் • (New Request)',
                                   style: GoogleFonts.hindMadurai(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
@@ -202,6 +207,75 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                       ),
                       const SizedBox(height: 14),
 
+                      // Location Field (Mandatory)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'இருப்பிடம் (Location) *',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            'Required • அவசியம்',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.favoriteRed,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: locationController,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        style: GoogleFonts.poppins(fontSize: 14),
+                        onChanged: (_) => setModalState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'உங்கள் ஊர் / நகரம் (e.g. Erode / Chennai)',
+                          prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
+                          filled: true,
+                          fillColor: AppColors.scaffoldBackground,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.cardBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.cardBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.sunriseGold, width: 1.5),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.favoriteRed, width: 1.5),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(color: AppColors.favoriteRed, width: 2),
+                          ),
+                          errorStyle: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.favoriteRed,
+                          ),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter your location (இருப்பிடம் தேவை)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
                       // Description Field
                       Text(
                         'ஜெப தேவை (Prayer Description) *',
@@ -236,33 +310,40 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Voice Note URL (Optional)
-                      Text(
-                        'குரல் பதிவு முகவரி (Voice Note URL - Optional)',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: voiceNoteController,
-                        keyboardType: TextInputType.url,
-                        style: GoogleFonts.poppins(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'https://example.com/audio.m4a (Optional)',
-                          prefixIcon: const Icon(Icons.mic_none_rounded, size: 20),
-                          filled: true,
-                          fillColor: AppColors.scaffoldBackground,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: AppColors.cardBorder),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 22),
+                      // Warning indicator if location is missing
+                      // if (locationController.text.trim().isEmpty)
+                      //   Container(
+                      //     margin: const EdgeInsets.only(bottom: 12),
+                      //     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      //     decoration: BoxDecoration(
+                      //       color: AppColors.favoriteRed.withValues(alpha: 0.08),
+                      //       borderRadius: BorderRadius.circular(12),
+                      //       border: Border.all(
+                      //         color: AppColors.favoriteRed.withValues(alpha: 0.25),
+                      //       ),
+                      //     ),
+                      //     child: Row(
+                      //       children: [
+                      //         const Icon(
+                      //           Icons.warning_amber_rounded,
+                      //           size: 16,
+                      //           color: AppColors.favoriteRed,
+                      //         ),
+                      //         const SizedBox(width: 8),
+                      //         Expanded(
+                      //           child:
+                      //           Text(
+                      //             'Location is required to submit • இருப்பிடம் தேவை',
+                      //             style: GoogleFonts.poppins(
+                      //               fontSize: 11,
+                      //               fontWeight: FontWeight.w600,
+                      //               color: AppColors.favoriteRed,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
 
                       // Submit Button
                       SizedBox(
@@ -272,12 +353,39 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                           onPressed: isSubmittingLocal
                               ? null
                               : () async {
-                                  if (!formKey.currentState!.validate()) return;
+                                  final locationText = locationController.text.trim();
+                                  if (!formKey.currentState!.validate() || locationText.isEmpty) {
+                                    setModalState(() {
+                                      autovalidateMode = AutovalidateMode.always;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: const [
+                                            Icon(Icons.error_outline_rounded, color: Colors.white),
+                                            SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Please enter your location before submitting',
+                                                style: TextStyle(fontWeight: FontWeight.w600),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: AppColors.favoriteRed,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                    );
+                                    return;
+                                  }
+
                                   setModalState(() => isSubmittingLocal = true);
 
                                   final success = await _provider.createPrayerRequest(
                                     name: nameController.text.trim(),
                                     mobile: mobileController.text.trim(),
+                                    location: locationText,
                                     description: descController.text.trim(),
                                     voiceNoteUrl: voiceNoteController.text.trim().isNotEmpty
                                         ? voiceNoteController.text.trim()
@@ -288,6 +396,7 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                                     setModalState(() => isSubmittingLocal = false);
                                   }
                                   if (ctx.mounted && success) {
+                                    await StorageService.saveUserLocation(locationText);
                                     Navigator.of(ctx).pop();
                                   }
                                   if (!mounted) return;
@@ -495,7 +604,7 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
             foregroundColor: AppColors.sunriseGold,
             icon: const Icon(Icons.add_rounded, size: 22),
             label: Text(
-              'விண்ணப்பம் சேர்க்க',
+              'Add Prayer Request',
               style: GoogleFonts.hindMadurai(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
@@ -797,6 +906,18 @@ class _PrayerRequestsScreenState extends State<PrayerRequestsScreen> {
                   const SizedBox(width: 4),
                   Text(
                     request.mobile,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+                if (request.location != null && request.location!.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 4),
+                  Text(
+                    request.location!,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       color: AppColors.textMuted,

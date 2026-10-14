@@ -3,6 +3,7 @@ class PrayerRequest {
   final String name;
   final String mobile;
   final String description;
+  final String? location;
   final String? voiceNoteUrl;
   final String status;
   final String deviceId;
@@ -13,6 +14,7 @@ class PrayerRequest {
     required this.name,
     required this.mobile,
     required this.description,
+    this.location,
     this.voiceNoteUrl,
     required this.status,
     required this.deviceId,
@@ -34,6 +36,7 @@ class PrayerRequest {
       name: json['name'] as String? ?? '',
       mobile: json['mobile'] as String? ?? '',
       description: json['description'] as String? ?? '',
+      location: json['location'] as String?,
       voiceNoteUrl: json['voice_note_url'] as String?,
       status: json['status'] as String? ?? 'pending',
       deviceId: json['device_id'] as String? ?? '',
@@ -46,6 +49,7 @@ class PrayerRequest {
       'name': name,
       'mobile': mobile,
       'description': description,
+      if (location != null && location!.isNotEmpty) 'location': location,
       'voice_note_url': voiceNoteUrl,
     };
   }

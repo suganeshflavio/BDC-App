@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/storage_service.dart';
 import '../../models/feedback_question.dart';
 import '../../providers/feedback_provider.dart';
 
@@ -14,13 +15,31 @@ class FeedbackScreen extends StatefulWidget {
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
+  final _formKey = GlobalKey<FormState>();
   late final FeedbackProvider _provider;
+  late final TextEditingController _nameController;
+  late final FocusNode _nameFocusNode;
+  late final ScrollController _scrollController;
   final Map<int, TextEditingController> _controllers = {};
+  String? _nameError;
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
     super.initState();
     _provider = widget.provider ?? FeedbackProvider();
+    _nameController = TextEditingController(
+      text: StorageService.getUserName() ?? '',
+    );
+    _nameFocusNode = FocusNode();
+    _scrollController = ScrollController();
+    _nameController.addListener(() {
+      setState(() {
+        if (_nameController.text.trim().isNotEmpty) {
+          _nameError = null;
+        }
+      });
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _provider.loadQuestions();
@@ -30,6 +49,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _nameFocusNode.dispose();
+    _scrollController.dispose();
     for (final c in _controllers.values) {
       c.dispose();
     }
@@ -49,16 +71,82 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    // Ensure all active controllers sync back to provider
+    // 1. Ensure all active controllers sync back to provider
     for (final entry in _controllers.entries) {
       _provider.setAnswer(entry.key, entry.value.text);
     }
 
-    final success = await _provider.submitFeedback();
+    // 2. Validate form and mandatory name field
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    final name = _nameController.text.trim();
+    if (!isFormValid || name.isEmpty) {
+      setState(() {
+        _autoValidateMode = AutovalidateMode.always;
+        _nameError = 'Please enter your name';
+      });
+      _nameFocusNode.requestFocus();
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.error_outline_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Please enter your name',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.favoriteRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    // 3. Ensure at least one question is answered
+    final hasAnswers = _controllers.values.any((c) => c.text.trim().isNotEmpty);
+    if (!hasAnswers) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.info_outline_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Please answer at least one question',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.favoriteRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final success = await _provider.submitFeedback(
+      name: name,
+    );
 
     if (!mounted) return;
 
     if (success) {
+      await StorageService.saveUserName(name);
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -187,75 +275,121 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             color: AppColors.sunriseGold,
             onRefresh: () => _provider.loadQuestions(forceRefresh: true),
             child: SingleChildScrollView(
+              controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Info Intro Banner
-                  _buildIntroCard(),
-
-                  const SizedBox(height: 20),
-
-                  if (isLoading && questions.isEmpty)
-                    _buildLoadingSkeleton()
-                  else if (questions.isEmpty)
-                    _buildEmptyState()
-                  else ...[
-                    // Render Questions
-                    ...questions.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final question = entry.value;
-                      return _buildQuestionCard(question, index + 1);
-                    }),
+              child: Form(
+                key: _formKey,
+                autovalidateMode: _autoValidateMode,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Info Intro Banner
+                    _buildIntroCard(),
 
                     const SizedBox(height: 20),
 
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: isSubmitting ? null : _handleSubmit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryDark,
-                          foregroundColor: AppColors.sunriseGold,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: isSubmitting
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.sunriseGold,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.send_rounded, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'கருத்துக்களை சமர்ப்பிக்கவும் (Submit Feedback)',
-                                    style: GoogleFonts.hindMadurai(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                                ),
-                      ),
-                    ),
-                  ],
+                    if (isLoading && questions.isEmpty)
+                      _buildLoadingSkeleton()
+                    else if (questions.isEmpty)
+                      _buildEmptyState()
+                    else ...[
+                      // Name Field at the top of questions
+                      _buildNameCard(),
 
-                  const SizedBox(height: 32),
-                ],
+                      // Render Questions
+                      ...questions.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final question = entry.value;
+                        return _buildQuestionCard(question, index + 1);
+                      }),
+
+                      const SizedBox(height: 20),
+
+                      // Real-time helper if name is empty
+                      if (_nameController.text.trim().isEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.favoriteRed.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.favoriteRed.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber_rounded,
+                                size: 18,
+                                color: AppColors.favoriteRed,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Name is required to submit',
+                                  style: GoogleFonts.hindMadurai(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.favoriteRed,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: isSubmitting ? null : _handleSubmit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryDark,
+                            foregroundColor: AppColors.sunriseGold,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.sunriseGold,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.send_rounded, size: 18),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'கருத்துக்களை சமர்ப்பிக்கவும் (Submit Feedback)',
+                                        style: GoogleFonts.hindMadurai(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ),
@@ -501,6 +635,131 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ),
         );
       }),
+    );
+  }
+
+  Widget _buildNameCard() {
+    final hasError = _nameError != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: hasError ? AppColors.favoriteRed : AppColors.cardBorder,
+          width: hasError ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: hasError
+                ? AppColors.favoriteRed.withValues(alpha: 0.08)
+                : AppColors.primaryDark.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: hasError
+                      ? AppColors.favoriteRed.withValues(alpha: 0.12)
+                      : AppColors.primaryLight.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person_rounded,
+                  color: hasError ? AppColors.favoriteRed : AppColors.primaryDark,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'உங்கள் பெயர் (Your Name) *',
+                      style: GoogleFonts.hindMadurai(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Name (Required)',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.favoriteRed,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _nameController,
+            focusNode: _nameFocusNode,
+            autovalidateMode: _autoValidateMode,
+            textInputAction: TextInputAction.next,
+            style: GoogleFonts.poppins(fontSize: 14),
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) {
+                return 'Please enter your name';
+              }
+              return null;
+            },
+            decoration: InputDecoration(
+              hintText: 'Enter your name',
+              prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+              filled: true,
+              fillColor: AppColors.scaffoldBackground,
+              errorText: _nameError,
+              errorStyle: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.favoriteRed,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.cardBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: hasError ? AppColors.favoriteRed : AppColors.cardBorder,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: hasError ? AppColors.favoriteRed : AppColors.sunriseGold,
+                  width: 1.5,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.favoriteRed, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.favoriteRed, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

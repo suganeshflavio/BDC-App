@@ -9,8 +9,11 @@ import 'package:chruch_coir/core/services/api_service.dart';
 import 'package:chruch_coir/providers/song_provider.dart';
 import 'package:chruch_coir/providers/settings_provider.dart';
 import 'package:chruch_coir/providers/favorite_provider.dart';
+import 'package:chruch_coir/providers/feedback_provider.dart';
+import 'package:chruch_coir/providers/prayer_request_provider.dart';
 import 'package:chruch_coir/models/prayer_request.dart';
 import 'package:chruch_coir/models/feedback_question.dart';
+import 'package:chruch_coir/models/announcement.dart';
 import 'package:chruch_coir/core/services/api_exception.dart';
 
 void main() {
@@ -175,6 +178,11 @@ void main() {
       expect(StorageService.getUserEmail(), 'allwin@example.com');
       expect(StorageService.getAuthToken(), 'test-token-xyz');
 
+      await StorageService.saveUserName('Guest');
+      expect(StorageService.getUserName(), isNull);
+      await StorageService.saveUserName('guest user');
+      expect(StorageService.getUserName(), isNull);
+
       await StorageService.clearAuthToken();
       expect(StorageService.getAuthToken(), isNull);
     });
@@ -230,6 +238,160 @@ void main() {
       final ans = FeedbackAnswerItem(questionId: 1, answerText: 'Great service');
       expect(ans.toJson()['question_id'], 1);
       expect(ans.toJson()['answer_text'], 'Great service');
+    });
+
+    test('PrayerRequest location field is parsed from JSON and serialized to JSON', () {
+      final json = {
+        'id': 7,
+        'name': 'Deva',
+        'mobile': '9876543210',
+        'location': 'Erode',
+        'description': 'Family blessing',
+        'status': 'pending',
+        'device_id': 'dev-123',
+      };
+
+      final req = PrayerRequest.fromJson(json);
+      expect(req.id, 7);
+      expect(req.name, 'Deva');
+      expect(req.mobile, '9876543210');
+      expect(req.location, 'Erode');
+      expect(req.description, 'Family blessing');
+
+      final serialized = req.toJson();
+      expect(serialized['location'], 'Erode');
+    });
+
+    test('createPrayerRequest enforces mandatory location field', () async {
+      final service = ApiService(baseUrl: 'https://test.api/v1', client: MockClient((_) async => http.Response('{}', 200)));
+      expect(
+        () => service.createPrayerRequest(
+          name: 'John',
+          mobile: '9876543210',
+          description: 'Prayer for healing',
+          location: '   ',
+        ),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
+      );
+
+      final provider = PrayerRequestProvider(apiService: service);
+      final ok = await provider.createPrayerRequest(
+        name: 'John',
+        mobile: '9876543210',
+        description: 'Prayer for healing',
+        location: '',
+      );
+      expect(ok, isFalse);
+      expect(provider.errorMessage, contains('location'));
+    });
+
+    test('submitFeedbackAnswers passes name in JSON payload', () async {
+      final capturedBodies = <Map<String, dynamic>>[];
+      final mockClient = MockClient((request) async {
+        if (request.url.path.endsWith('/auth/device')) {
+          return http.Response(
+            jsonEncode({'token': 't1', 'user': {'id': 1, 'name': 'Deva', 'email': '', 'phone': null, 'role': 'user'}}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/feedback_answers')) {
+          capturedBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response('{"message":"success"}', 201, headers: {'content-type': 'application/json'});
+        }
+        return http.Response('{"error":"not found"}', 404);
+      });
+
+      final service = ApiService(baseUrl: 'https://test.api/v1', client: mockClient);
+      final ok = await service.submitFeedbackAnswers([{'question_id': 1, 'answer_text': 'Praise God'}], name: 'Solomon');
+      expect(ok, isTrue);
+      expect(capturedBodies.length, 1);
+      expect(capturedBodies.first['name'], 'Solomon');
+      expect((capturedBodies.first['answers'] as List).length, 1);
+
+      // Verify empty name is rejected with 422 ApiException
+      expect(
+        () => service.submitFeedbackAnswers([{'question_id': 1, 'answer_text': 'Praise God'}], name: '   '),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
+      );
+
+      // Verify FeedbackProvider rejects empty name without network call
+      final provider = FeedbackProvider(apiService: service);
+      provider.setAnswer(1, 'Great service');
+      final providerResult = await provider.submitFeedback(name: '');
+      expect(providerResult, isFalse);
+      expect(provider.errorMessage, contains('பெயரை உள்ளிடவும்'));
+    });
+
+    test('Announcement model extracts URLs from HTML img tags and raw URLs', () {
+      final json = {
+        'id': 1,
+        'subject': 'Christmas Service',
+        'description': 'Join us for a special Christmas celebration!',
+        'banner_images': [
+          '<img src="https://example.com/christmas-banner.jpg" alt="Christmas" />',
+          'https://example.com/second-banner.png',
+        ],
+        'created_at': '2026-12-01T09:00:00.000Z',
+      };
+
+      final announcement = Announcement.fromJson(json);
+      expect(announcement.id, 1);
+      expect(announcement.subject, 'Christmas Service');
+      expect(announcement.description, 'Join us for a special Christmas celebration!');
+      expect(announcement.bannerImages.length, 2);
+      expect(announcement.bannerImages[0], 'https://example.com/christmas-banner.jpg');
+      expect(announcement.bannerImages[1], 'https://example.com/second-banner.png');
+
+      final listRes = AnnouncementsResponse.fromJson({
+        'announcements': [json]
+      });
+      expect(listRes.announcements.length, 1);
+      expect(listRes.announcements.first.bannerImages.first, 'https://example.com/christmas-banner.jpg');
+    });
+
+    test('fetchAnnouncements sends GET /admin/announcements with Bearer token', () async {
+      final urls = <String>[];
+      final authHeaders = <String?>[];
+
+      final mockClient = MockClient((request) async {
+        urls.add(request.url.toString());
+        authHeaders.add(request.headers['Authorization']);
+
+        if (request.url.path.endsWith('/auth/device')) {
+          return http.Response(
+            jsonEncode({'token': 'admin-sample-token', 'user': {'id': 1, 'name': 'Admin', 'email': '', 'phone': null, 'role': 'admin'}}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/admin/announcements')) {
+          return http.Response(
+            jsonEncode({
+              'announcements': [
+                {
+                  'id': 1,
+                  'subject': 'Christmas Service',
+                  'description': 'Special celebration',
+                  'banner_images': ['<img src="https://example.com/banner.jpg" alt="B" />'],
+                  'created_at': '2026-12-01T09:00:00.000Z',
+                }
+              ]
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{"error":"not found"}', 404);
+      });
+
+      final service = ApiService(baseUrl: 'https://test.api/v1', client: mockClient);
+      final list = await service.fetchAnnouncements(page: 1);
+
+      expect(list.length, 1);
+      expect(list.first.subject, 'Christmas Service');
+      expect(list.first.bannerImages.first, 'https://example.com/banner.jpg');
+      expect(urls.any((u) => u.contains('/admin/announcements')), isTrue);
     });
   });
 

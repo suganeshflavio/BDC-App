@@ -59,8 +59,16 @@ class PrayerRequestProvider extends ChangeNotifier {
     required String name,
     required String mobile,
     required String description,
+    required String location,
     String? voiceNoteUrl,
   }) async {
+    final trimmedLoc = location.trim();
+    if (trimmedLoc.isEmpty) {
+      _errorMessage = 'Please enter your location';
+      notifyListeners();
+      return false;
+    }
+
     _isSubmitting = true;
     _errorMessage = null;
     notifyListeners();
@@ -70,6 +78,7 @@ class PrayerRequestProvider extends ChangeNotifier {
         name: name,
         mobile: mobile,
         description: description,
+        location: trimmedLoc,
         voiceNoteUrl: voiceNoteUrl,
       );
 
@@ -78,15 +87,19 @@ class PrayerRequestProvider extends ChangeNotifier {
         _totalCount++;
         _isSubmitting = false;
         notifyListeners();
+        print('>>> [PrayerRequestProvider]: Successfully submitted prayer request #${created.id}');
         return true;
       } else {
         _errorMessage = 'Failed to submit prayer request. Please check details.';
+        print('>>> [PrayerRequestProvider]: createPrayerRequest returned null');
       }
     } on ApiException catch (e) {
       _errorMessage = e.message;
+      print('>>> [PrayerRequestProvider API Error]: ${e.message} (status: ${e.statusCode})');
       debugPrint('PrayerRequestProvider.createPrayerRequest API error: ${e.message}');
     } catch (e) {
       _errorMessage = 'Error submitting request. Please try again.';
+      print('>>> [PrayerRequestProvider Unexpected Error]: $e');
       debugPrint('PrayerRequestProvider.createPrayerRequest error: $e');
     } finally {
       _isSubmitting = false;

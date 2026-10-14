@@ -62,6 +62,7 @@ class StorageService {
   static const String _keyUserName = 'auth_user_name';
   static const String _keyUserEmail = 'auth_user_email';
   static const String _keyUserPhone = 'auth_user_phone';
+  static const String _keyUserLocation = 'auth_user_location';
   static const String _keyUserRole = 'auth_user_role';
 
   // Auth Token
@@ -98,13 +99,32 @@ class StorageService {
   }
 
   // User Profile
-  static String? getUserName() => _prefs?.getString(_keyUserName);
-  static Future<void> saveUserName(String name) async =>
-      await _prefs?.setString(_keyUserName, name);
+  static String? getUserName() {
+    final raw = _prefs?.getString(_keyUserName);
+    if (raw == null) return null;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'guest' || trimmed.toLowerCase() == 'guest user') {
+      return null;
+    }
+    return trimmed;
+  }
+
+  static Future<void> saveUserName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'guest' || trimmed.toLowerCase() == 'guest user') {
+      await _prefs?.remove(_keyUserName);
+    } else {
+      await _prefs?.setString(_keyUserName, trimmed);
+    }
+  }
 
   static String? getUserPhone() => _prefs?.getString(_keyUserPhone);
   static Future<void> saveUserPhone(String phone) async =>
       await _prefs?.setString(_keyUserPhone, phone);
+
+  static String? getUserLocation() => _prefs?.getString(_keyUserLocation);
+  static Future<void> saveUserLocation(String location) async =>
+      await _prefs?.setString(_keyUserLocation, location);
 
   static String? getUserEmail() => _prefs?.getString(_keyUserEmail);
   static Future<void> saveUserEmail(String email) async =>

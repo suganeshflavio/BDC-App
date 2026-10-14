@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/services/api_service.dart';
 import '../core/services/api_exception.dart';
+import '../core/services/storage_service.dart';
 import '../models/feedback_question.dart';
 
 class FeedbackProvider extends ChangeNotifier {
@@ -54,7 +55,14 @@ class FeedbackProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> submitFeedback() async {
+  Future<bool> submitFeedback({required String name}) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      _errorMessage = 'தயவுசெய்து உங்கள் பெயரை உள்ளிடவும் (Please enter your name before submitting feedback)';
+      notifyListeners();
+      return false;
+    }
+
     final payload = <Map<String, dynamic>>[];
     for (final entry in _answers.entries) {
       final text = entry.value.trim();
@@ -67,7 +75,7 @@ class FeedbackProvider extends ChangeNotifier {
     }
 
     if (payload.isEmpty) {
-      _errorMessage = 'Please provide an answer before submitting.';
+      _errorMessage = 'தயவுசெய்து ஏதேனும் ஒரு கேள்விக்கு பதிலளிக்கவும் (Please provide an answer before submitting).';
       notifyListeners();
       return false;
     }
@@ -77,8 +85,9 @@ class FeedbackProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await _apiService.submitFeedbackAnswers(payload);
+      final success = await _apiService.submitFeedbackAnswers(payload, name: trimmedName);
       if (success) {
+        await StorageService.saveUserName(trimmedName);
         _submitSuccess = true;
         _isSubmitting = false;
         notifyListeners();
